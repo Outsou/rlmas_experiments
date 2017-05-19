@@ -36,7 +36,7 @@ if __name__ == "__main__":
 
     sim = Simulation(env=env)
 
-    for _ in range(1000):
+    for _ in range(10000):
         sim.step()
 
     preferences = {}

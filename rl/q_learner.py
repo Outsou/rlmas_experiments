@@ -3,7 +3,7 @@ from utilities import math
 
 
 class QLearner:
-    def __init__(self, states, actions, discount_factor = 0.99, learning_factor = 0.85):
+    def __init__(self, states, actions, discount_factor = 0.8, learning_factor = 0.85):
         self.q_table = np.zeros((states, actions))
         self.actions = actions
         self.learning_factor = learning_factor
