@@ -4,8 +4,9 @@ import numpy as np
 
 class LearningAgent(GridAgent):
 
-    def __init__(self, environment, *args, **kwargs):
+    def __init__(self, environment, standard_deviation = 1, *args, **kwargs):
         self.learner = kwargs.pop('learner')
+        self.standard_deviation = standard_deviation
         self.learner.set_initial_state(0)
 
         self.difficulty_preference = kwargs.pop('difficulty_preference')
@@ -19,7 +20,9 @@ class LearningAgent(GridAgent):
 
     @aiomas.expose
     async def get_number(self):
-        return self.difficulty_preference
+        number = np.random.normal(self.difficulty_preference, self.standard_deviation)
+        #print("Preference; {}, generated: {}".format(self.difficulty_preference, number))
+        return number
 
     @aiomas.expose
     async def act(self, *args, **kwargs):

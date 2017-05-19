@@ -6,14 +6,24 @@ from creamas.grid import GridEnvironment
 from agents.learning_agent import LearningAgent
 from rl.q_learner import QLearner
 
+import matplotlib.pyplot as plt
+import numpy as np
+import matplotlib.mlab as mlab
+from scipy.stats import norm
+
+
 if __name__ == "__main__":
     env = GridEnvironment.create(('localhost', 5555))
     env.gs = (2, 2)
 
-    for i in range(2):
-        LearningAgent(environment=env, learner=QLearner(1, 2), difficulty_preference=1)
-        LearningAgent(environment=env, learner=QLearner(1, 2), difficulty_preference=2)
+    mu1 = 1.5
+    mu2 = 2
+    sigma1 = 0.5
+    sigma2 = 0.5
 
+    for i in range(2):
+        LearningAgent(environment=env, learner=QLearner(1, 2), difficulty_preference=mu1, standard_deviation=sigma1)
+        LearningAgent(environment=env, learner=QLearner(1, 2), difficulty_preference=mu2, standard_deviation=sigma2)
 
     loop = asyncio.get_event_loop()
     loop.run_until_complete(env.set_agent_neighbors())
@@ -49,4 +59,16 @@ if __name__ == "__main__":
 
     sim.end()
 
+    cutoff_prob = 0.001
+    left1 = norm.ppf(cutoff_prob, loc=mu1, scale=sigma1)
+    left2 = norm.ppf(cutoff_prob, loc=mu2, scale=sigma2)
+    left = min(left1, left2)
+    right1 = norm.ppf(1-cutoff_prob, loc=mu1, scale=sigma1)
+    right2 = norm.ppf(1-cutoff_prob, loc=mu2, scale=sigma2)
+    right = max(right1, right2)
+    x = np.linspace(left, right, 100)
+
+    plt.plot(x, mlab.normpdf(x, mu1, sigma1))
+    plt.plot(x, mlab.normpdf(x, mu2, sigma2))
+    plt.show()
 
