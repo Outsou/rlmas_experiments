@@ -15,8 +15,9 @@ class SprAgent(SpiroAgent):
         self.rand = rand
         self.total_reward = 0
 
-    def set_acquaintances(self):
-        addresses = self.env.get_agents()
+    @aiomas.expose
+    def set_acquaintances(self, addresses):
+        addresses = list(addresses)
         addresses.remove(self.addr)
 
         for state in self.states:
@@ -54,6 +55,7 @@ class SprAgent(SpiroAgent):
         self._log(logging.INFO, 'Random: {}'.format(self.rand))
         self._log(logging.INFO, 'Reward: {}'.format(reward))
         self._log(logging.INFO, 'Total reward: {}'.format(self.total_reward))
+
 
     @aiomas.expose
     def close(self, folder=None):
