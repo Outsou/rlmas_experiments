@@ -14,3 +14,19 @@ class SprEnvironment(MultiEnvironment):
         for agent in agents:
             aiomas.run(until=agent.set_acquaintances(addresses))
 
+    def get_total_reward(self):
+        agents = self.get_agents(address=False)
+
+        total_reward = 0
+
+        for agent in agents:
+            total_reward += aiomas.run(until=agent.get_total_reward())
+
+        return total_reward
+
+    def log_situation(self, step):
+        agents = self.get_agents(address=False)
+
+        for agent in agents:
+            aiomas.run(until=agent.log_situation())
+
