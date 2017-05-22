@@ -1,5 +1,6 @@
 from creamas.examples.spiro.spiro_agent import SpiroAgent
 from rl.q_learner import QLearner
+import logging
 import aiomas
 import numpy as np
 
@@ -7,7 +8,7 @@ import numpy as np
 class SprAgent(SpiroAgent):
 
     def __init__(self, environment, states, rand = False, *args, **kwargs):
-        super().__init__(environment, -1, *args, **kwargs)
+        super().__init__(environment, *args, **kwargs)
         self.states = states
         self.actions = []
         self.learner = None
@@ -28,6 +29,8 @@ class SprAgent(SpiroAgent):
     @aiomas.expose
     async def ask_opinion(self, artifact):
         evaluation, _ = self.evaluate(artifact)
+        #print(evaluation)
+        self.learn(artifact)
         return evaluation
 
     @aiomas.expose
@@ -48,9 +51,13 @@ class SprAgent(SpiroAgent):
 
         self.learn(artifact)
 
+        self._log(logging.INFO, 'Random: {}'.format(self.rand))
+        self._log(logging.INFO, 'Reward: {}'.format(reward))
+        self._log(logging.INFO, 'Total reward: {}'.format(self.total_reward))
+
     @aiomas.expose
     def close(self, folder=None):
-        print('Agent {} total reward (rand {}): {}'.format(self.addr, self.rand, self.total_reward))
+        pass
 
 
 

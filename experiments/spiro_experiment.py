@@ -16,19 +16,26 @@ if __name__ == "__main__":
     # art2 = SprAgent(env, ((120, 120))).create(50, -100)
     # scipy.misc.imsave('test2.jpg', art2)
 
-    SprAgent(env, ((25, 25), (85, 85)), rand=True)
-    SprAgent(env, ((25, -25), (85, -85)))
-    SprAgent(env, ((-25, 25), (-85, 85)))
+    rand = True
+
+    SprAgent(env, ((25, 25), (85, 85)), rand=rand, log_folder=log_folder, desired_novelty=10)
+    SprAgent(env, ((25, -25), (85, -85)), rand=rand, log_folder=log_folder, desired_novelty=10)
+    SprAgent(env, ((-25, 25), (-85, 85)), rand=rand, log_folder=log_folder, desired_novelty=10)
 
     env.set_agent_acquaintances()
 
     loop = asyncio.get_event_loop()
 
-    sim = Simulation(env=env)
+    sim = Simulation(env=env, log_folder=log_folder)
 
     for step in range(100):
-        print('Step: {}'.format(step))
         sim.step()
+
+    total_reward = 0
+    for agent in env.get_agents(address=False):
+        total_reward += agent.total_reward
+
+    print('Total reward: ' + str(total_reward))
 
     sim.end()
 
