@@ -21,12 +21,11 @@ class QMovingSprAgent(SpiroAgent):
         self.step_size = step_size
 
         self.actions = ('N', 'E', 'W', 'S')
-        reward_direction = ('down', 'up')
-        self.states = []
+        self.previous_action = np.random.choice(self.actions)
+        reward_directions = ('down', 'up')
+        action_pairs = [(x, y) for x in self.actions for y in self.actions]
 
-        for last_direction in self.actions:
-            for novelty in reward_direction:
-                self.states.append((last_direction, novelty))
+        self.states = [action_pair + (reward_direction, ) for action_pair in action_pairs for reward_direction in reward_directions]
 
         self.learner = QLearner(len(self.states) + 1, len(self.actions), initial_values=initial_values, discount_factor=discount_factor, learning_factor=learning_factor)
         self.learner.set_initial_state(len(self.states))
@@ -95,9 +94,9 @@ class QMovingSprAgent(SpiroAgent):
         else:
             reward_direction = 'down'
 
-        new_state = (action, reward_direction)
+        new_state = (self.previous_action, action, reward_direction)
         self.learner.give_reward(self.states.index(new_state), val)
-
+        self.previous_action = action
         self.total_reward += val
 
     def close(self, folder):

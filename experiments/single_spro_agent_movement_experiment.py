@@ -13,7 +13,7 @@ if __name__ == "__main__":
     step_size = 10
     search_width = 10
     start_location = np.array([0, 0])
-    mem_size = 32
+    mem_size = 100
 
     q_agent = QMovingSprAgent(environment=env,
                               desired_novelty=-1,
