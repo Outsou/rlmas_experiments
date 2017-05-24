@@ -21,19 +21,20 @@ class QMovingSprAgent(SpiroAgent):
         self.step_size = step_size
 
         self.actions = ('N', 'E', 'W', 'S')
-        #last_judgement = ('reject', 'pass')
+        reward_direction = ('down', 'up')
         self.states = []
 
         for last_direction in self.actions:
-            self.states.append(last_direction)
-            #for novelty in last_judgement:
-                #self.states.append((last_direction, novelty))
+            for novelty in reward_direction:
+                self.states.append((last_direction, novelty))
 
         self.learner = QLearner(len(self.states) + 1, len(self.actions), initial_values=initial_values, discount_factor=discount_factor, learning_factor=learning_factor)
         self.learner.set_initial_state(len(self.states))
 
         self.arg_history.append(self.spiro_args)
         self.total_reward = 0
+
+        self.last_reward = 0
 
     def invent(self, n):
         '''Invent new spirograph by taking n random steps from current position
@@ -89,7 +90,13 @@ class QMovingSprAgent(SpiroAgent):
             artifact.self_criticism = 'pass'
             self.learn(artifact, self.teaching_iterations)
 
-        self.learner.give_reward(self.states.index(action), val)
+        if val >= self.last_reward:
+            reward_direction = 'up'
+        else:
+            reward_direction = 'down'
+
+        new_state = (action, reward_direction)
+        self.learner.give_reward(self.states.index(new_state), val)
 
         self.total_reward += val
 
