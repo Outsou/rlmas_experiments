@@ -8,27 +8,28 @@ import aiomas
 import numpy as np
 
 
-class MovingSprAgent(SpiroAgent):
+class QMovingSprAgent(SpiroAgent):
     '''
     state: last movement dir & was last artifact passed or rejected
     action: movement dir
     '''
 
-    def __init__(self, environment, step_size=1, start_location = np.array([0, 0]), *args, **kwargs):
+    def __init__(self, environment, step_size=1, start_location = np.array([0, 0]), initial_values=0, discount_factor=0.85, learning_factor=0.8, *args, **kwargs):
         super().__init__(environment, *args, **kwargs)
 
         self.spiro_args = start_location
         self.step_size = step_size
 
         self.actions = ('N', 'E', 'W', 'S')
-        last_novel = ('reject', 'pass')
+        #last_judgement = ('reject', 'pass')
         self.states = []
 
         for last_direction in self.actions:
-            for novelty in last_novel:
-                self.states.append((last_direction, novelty))
+            self.states.append(last_direction)
+            #for novelty in last_judgement:
+                #self.states.append((last_direction, novelty))
 
-        self.learner = QLearner(len(self.states) + 1, len(self.actions), initial_values=1)
+        self.learner = QLearner(len(self.states) + 1, len(self.actions), initial_values=initial_values, discount_factor=discount_factor, learning_factor=learning_factor)
         self.learner.set_initial_state(len(self.states))
 
         self.arg_history.append(self.spiro_args)
@@ -60,11 +61,10 @@ class MovingSprAgent(SpiroAgent):
         best_artifact.creation_time = self.age
         return best_artifact
 
-    @aiomas.expose
     async def act(self):
 
         #action = self.actions[self.learner.choose_action_e_greedy()]
-        action = self.actions[self.learner.choose_action_softmax(0.5)]
+        action = self.actions[self.learner.choose_action_softmax(1.5)]
         assert action in self.actions
 
         step = self.step_size
@@ -89,10 +89,40 @@ class MovingSprAgent(SpiroAgent):
             artifact.self_criticism = 'pass'
             self.learn(artifact, self.teaching_iterations)
 
-        new_state = (action, artifact.self_criticism)
-        self.learner.give_reward(self.states.index(new_state), val)
+        self.learner.give_reward(self.states.index(action), val)
 
         self.total_reward += val
 
     def close(self, folder):
         self.plot_places()
+
+class BasicMovingSprAgent(SpiroAgent):
+
+    def __init__(self, environment, start_location = np.array([0, 0]), initial_values=0, *args, **kwargs):
+        super().__init__(environment, *args, **kwargs)
+        self.spiro_args = start_location
+        self.total_reward = 0
+
+    async def act(self):
+        '''Agent's main method to create new spirographs.
+        See Simulation and CreativeAgent documentation for details.
+        '''
+
+        # Invent new artifact
+        artifact = self.invent(self.search_width)
+        args = artifact.framings[self.name]['args']
+        val = artifact.evals[self.name]
+        self.spiro_args = args
+        self.arg_history.append(self.spiro_args)
+        self.add_artifact(artifact)
+        if val >= self._own_threshold:
+            artifact.self_criticism = 'pass'
+            self.learn(artifact, self.teaching_iterations)
+        elif self.jump == 'random':
+            self.spiro_args = np.random.uniform(-199, 199,
+                                                self.spiro_args.shape)
+
+        self.total_reward += val
+
+    def close(self, folder):
+        pass
