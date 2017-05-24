@@ -26,7 +26,7 @@ class LearningAgent(GridAgent):
 
     @aiomas.expose
     async def act(self, *args, **kwargs):
-        action = self.learner.choose_action(1)
+        action = self.learner.choose_action_softmax(1)
         neighbor = await self.env.connect(self.actions[action])
         reward = np.exp(-abs(self.difficulty_preference - await neighbor.get_number()))
         self.learner.give_reward(0, reward)

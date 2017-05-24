@@ -53,7 +53,7 @@ class SprAgent(SpiroAgent):
         if self.rand:
             action = np.random.randint(len(self.actions))
         else:
-            action = self.learner.choose_action(1)
+            action = self.learner.choose_action_softmax(1)
 
         # Create new artifact based on selected state
         state = self.actions[action][0]
