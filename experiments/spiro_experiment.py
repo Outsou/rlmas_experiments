@@ -3,7 +3,6 @@ from creamas.core.simulation import Simulation
 from creamas.mp import MultiEnvManager
 from creamas.mp import EnvManager
 from creamas.core.environment import Environment
-from agents.spr_agent import SprAgent
 import logging
 import asyncio
 import aiomas
