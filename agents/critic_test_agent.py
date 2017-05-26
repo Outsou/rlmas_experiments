@@ -13,6 +13,8 @@ class CriticTestAgent(SpiroAgent):
 
     @aiomas.expose
     def set_acquaintances(self, addresses):
+        self.name = "{}_M{}".format(self.name, self.stmem.length)
+
         addresses = list(addresses)
         addresses.remove(self.addr)
 
@@ -35,18 +37,6 @@ class CriticTestAgent(SpiroAgent):
     async def act(self):
         artifact = self.invent(10)
 
-        bandit = self.bandit_learner.choose_bandit()
-        acquaintance = self.acquaintances[bandit]
-        acquaintance[1] += 1
-
-        connection = await self.env.connect(acquaintance[0])
-        passed = await connection.ask_if_passes(artifact)
-
-        if passed:
-            self.bandit_learner.give_reward(bandit, -1)
-        else:
-            self.bandit_learner.give_reward(bandit, 1)
-
         args = artifact.framings[self.name]['args']
         val = artifact.evals[self.name]
         self.spiro_args = args
@@ -57,12 +47,45 @@ class CriticTestAgent(SpiroAgent):
             artifact.self_criticism = 'pass'
             # Train SOM with the invented artifact
             self.learn(artifact, self.teaching_iterations)
+            # Ask someone for veto
+            bandit = self.bandit_learner.choose_bandit()
+            acquaintance = self.acquaintances[bandit]
+            acquaintance[1] += 1
+
+            connection = await self.env.connect(acquaintance[0])
+            passed = await connection.ask_if_passes(artifact)
+
+            if passed:
+                self.bandit_learner.give_reward(bandit, -1)
+            else:
+                self.bandit_learner.give_reward(bandit, 1)
         elif self.jump == 'random':
             largs = self.spiro_args
             self.spiro_args = np.random.uniform(-199, 199,
                                                 self.spiro_args.shape)
             self._log(logging.DEBUG, "Jumped from {} to {}"
                       .format(largs, self.spiro_args))
+
+    @aiomas.expose
+    def get_addr(self):
+        return self.addr
+
+    @aiomas.expose
+    def get_acquaintances(self):
+        return self.acquaintances
+
+    @aiomas.expose
+    def get_name(self):
+        return self.name
+
+    @aiomas.expose
+    def get_acquaintance_values(self):
+        acquaintance_values = {}
+
+        for i in range(len(self.acquaintances)):
+            acquaintance_values[self.acquaintances[i][0]] = self.bandit_learner.bandits[i]
+
+        return acquaintance_values
 
     def close(self, folder):
         pass

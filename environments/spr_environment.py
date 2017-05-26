@@ -30,3 +30,24 @@ class SprEnvironment(MultiEnvironment):
         for agent in agents:
             aiomas.run(until=agent.log_situation())
 
+    def get_acquaintance_counts(self):
+        agents = self.get_agents(address=False)
+
+        acquaintances = {}
+
+        for agent in agents:
+            name = aiomas.run(until=agent.get_name())
+            acquaintances[name] = aiomas.run(until=agent.get_acquaintances())
+
+        return acquaintances
+
+    def get_acquaintance_values(self):
+        agents = self.get_agents(address=False)
+
+        acquaintance_values = {}
+
+        for agent in agents:
+            name = aiomas.run(until=agent.get_name())
+            acquaintance_values[name] = aiomas.run(until=agent.get_acquaintance_values())
+
+        return acquaintance_values
