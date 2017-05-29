@@ -12,6 +12,7 @@ class CriticTestAgent(SpiroAgent):
         super().__init__(environment, *args, **kwargs)
         self.comparison_count = 0
         self.name = "{}_M{}".format(self.name, self.stmem.length)
+        self.validated_something = False
 
     @aiomas.expose
     def set_acquaintances(self, addresses):
@@ -116,3 +117,25 @@ class CriticTestAgent(SpiroAgent):
 
     def close(self, folder):
         pass
+
+    def validate(self, candidates):
+        besteval = 0.0
+        bestcand = None
+        valid = []
+        for c in candidates:
+            if c.creator != self.name:
+                ceval, _ = self.evaluate(c)
+                if ceval >= self._novelty_threshold:
+                    valid.append(c)
+                    if ceval > besteval:
+                        besteval = ceval
+                        bestcand = c
+            else:
+                valid.append(c)
+        if self.jump == 'best':
+            if bestcand is not None and not self.added_last:
+                largs = self.spiro_args
+                self.spiro_args = bestcand.framings[bestcand.creator]['args']
+                self._log(logging.INFO,
+                          "Jumped from {} to {}".format(largs, self.spiro_args))
+        return valid

@@ -1,5 +1,8 @@
 from creamas.examples.spiro.spiro_agent_mp import SpiroMultiEnvironment
 import aiomas
+import asyncio
+import logging
+
 
 class SprEnvironment(SpiroMultiEnvironment):
 
@@ -74,3 +77,27 @@ class SprEnvironment(SpiroMultiEnvironment):
         self._pool.join()
         self._env.shutdown()
         return rets
+
+    def validate_candidates(self):
+        '''Validate current candidates in the environment by pruning candidates
+        that are not validated at least by one agent, i.e. they are vetoed.
+
+        In larger societies this method might be costly, as it calls each
+        agents' ``validate_candidates``-method.
+        '''
+
+        valid_candidates = set(self.candidates)
+        tasks = []
+        for a in self._manager_addrs:
+            tasks.append(self._validate_candidates(a))
+        ret = aiomas.run(until=asyncio.gather(*tasks))
+
+        for r in ret:
+            result = aiomas.run(until=r)
+            vc = set(result)
+            valid_candidates = valid_candidates.intersection(vc)
+
+        self._candidates = list(valid_candidates)
+        self._log(logging.INFO,
+                  "{} valid candidates after get_agents used veto."
+                  .format(len(self.candidates)))
