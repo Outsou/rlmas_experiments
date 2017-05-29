@@ -55,7 +55,7 @@ if __name__ == "__main__":
     env.set_agent_acquaintances()
 
     sim = Simulation(env=env, log_folder=log_folder, callback=env.vote_and_save_info)
-    sim.async_steps(5)
+    sim.async_steps(100)
     acquaintance_counts = env.get_acquaintance_counts()
     acquaintance_values = env.get_acquaintance_values()
     total_comparisons = env.get_comparison_count()

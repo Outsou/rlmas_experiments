@@ -29,10 +29,12 @@ class CriticTestAgent(SpiroAgent):
     @aiomas.expose
     def ask_if_passes(self, artifact):
         evaluation, _ = self.evaluate(artifact)
+
         if evaluation >= self._novelty_threshold:
-            return True
+            artifact.add_eval(self, evaluation)
+            return True, artifact
         else:
-            return False
+            return False, artifact
 
     @aiomas.expose
     async def act(self):
@@ -56,14 +58,14 @@ class CriticTestAgent(SpiroAgent):
             acquaintance[1] += 1
 
             connection = await self.env.connect(acquaintance[0])
-            passed = await connection.ask_if_passes(artifact)
+            passed, artifact = await connection.ask_if_passes(artifact)
 
             if passed:
                 self.bandit_learner.give_reward(bandit, -1)
-            else:
-                self.bandit_learner.give_reward(bandit, 1)
                 self.env.add_candidate(artifact)
                 self.added_last = True
+            else:
+                self.bandit_learner.give_reward(bandit, 1)
         elif self.jump == 'random':
             largs = self.spiro_args
             self.spiro_args = np.random.uniform(-199, 199,
@@ -101,6 +103,9 @@ class CriticTestAgent(SpiroAgent):
 
         Returns value in [0, 1].
         '''
+
+        if self.name in artifact.evals:
+            return artifact.evals[self.name], None
 
         # Keep track of comparisons
         self.comparison_count += len(self.stmem.artifacts)
