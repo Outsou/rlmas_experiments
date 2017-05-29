@@ -8,13 +8,13 @@ import logging
 
 class CriticTestAgent(SpiroAgent):
 
-    def _init__(self, environment, *args, **kwargs):
+    def __init__(self, environment, *args, **kwargs):
         super().__init__(environment, *args, **kwargs)
+        self.comparison_count = 0
+        self.name = "{}_M{}".format(self.name, self.stmem.length)
 
     @aiomas.expose
     def set_acquaintances(self, addresses):
-        self.name = "{}_M{}".format(self.name, self.stmem.length)
-
         addresses = list(addresses)
         addresses.remove(self.addr)
 
@@ -24,6 +24,7 @@ class CriticTestAgent(SpiroAgent):
             self.acquaintances.append([acquaintance, 0])
 
         self.bandit_learner = BanditLearner(len(self.acquaintances))
+
 
     @aiomas.expose
     def ask_if_passes(self, artifact):
@@ -79,6 +80,10 @@ class CriticTestAgent(SpiroAgent):
         return self.name
 
     @aiomas.expose
+    def get_comparison_count(self):
+        return self.comparison_count
+
+    @aiomas.expose
     def get_acquaintance_values(self):
         acquaintance_values = {}
 
@@ -86,6 +91,19 @@ class CriticTestAgent(SpiroAgent):
             acquaintance_values[self.acquaintances[i][0]] = self.bandit_learner.bandits[i]
 
         return acquaintance_values
+
+    def evaluate(self, artifact):
+        '''Evaluate the artifact with respect to the agents short term memory.
+
+        Returns value in [0, 1].
+        '''
+
+        # Keep track of comparisons
+        self.comparison_count += len(self.stmem.artifacts)
+
+        if self.desired_novelty > 0:
+            return self.hedonic_value(self.novelty(artifact.obj))
+        return self.novelty(artifact.obj) / self.img_size, None
 
     def close(self, folder):
         pass

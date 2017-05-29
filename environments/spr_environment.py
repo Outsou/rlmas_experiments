@@ -51,3 +51,13 @@ class SprEnvironment(MultiEnvironment):
             acquaintance_values[name] = aiomas.run(until=agent.get_acquaintance_values())
 
         return acquaintance_values
+
+    def get_comparison_count(self):
+        agents = self.get_agents(address=False)
+
+        total_comparisons = 0
+
+        for agent in agents:
+            total_comparisons += aiomas.run(until=agent.get_comparison_count())
+
+        return total_comparisons
