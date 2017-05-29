@@ -8,11 +8,12 @@ import logging
 
 class CriticTestAgent(SpiroAgent):
 
-    def __init__(self, environment, *args, **kwargs):
+    def __init__(self, environment, ask_passing=True, *args, **kwargs):
         super().__init__(environment, *args, **kwargs)
         self.comparison_count = 0
         self.name = "{}_M{}".format(self.name, self.stmem.length)
         self.validated_something = False
+        self.ask_passing = ask_passing
 
     @aiomas.expose
     def set_acquaintances(self, addresses):
@@ -33,6 +34,7 @@ class CriticTestAgent(SpiroAgent):
 
         if evaluation >= self._novelty_threshold:
             artifact.add_eval(self, evaluation)
+            #self.learn(artifact, self.teaching_iterations)
             return True, artifact
         else:
             return False, artifact
@@ -53,20 +55,26 @@ class CriticTestAgent(SpiroAgent):
             artifact.self_criticism = 'pass'
             # Train SOM with the invented artifact
             self.learn(artifact, self.teaching_iterations)
-            # Ask someone for veto
-            bandit = self.bandit_learner.choose_bandit()
-            acquaintance = self.acquaintances[bandit]
-            acquaintance[1] += 1
 
-            connection = await self.env.connect(acquaintance[0])
-            passed, artifact = await connection.ask_if_passes(artifact)
+            # Check with another agent if the artifact is novel enough
+            if self.ask_passing:
+                # Ask someone for veto
+                bandit = self.bandit_learner.choose_bandit()
+                acquaintance = self.acquaintances[bandit]
+                acquaintance[1] += 1
 
-            if passed:
-                self.bandit_learner.give_reward(bandit, -1)
+                connection = await self.env.connect(acquaintance[0])
+                passed, artifact = await connection.ask_if_passes(artifact)
+
+                if passed:
+                    self.bandit_learner.give_reward(bandit, -1)
+                    self.env.add_candidate(artifact)
+                    self.added_last = True
+                else:
+                    self.bandit_learner.give_reward(bandit, 1)
+            else:
                 self.env.add_candidate(artifact)
                 self.added_last = True
-            else:
-                self.bandit_learner.give_reward(bandit, 1)
         elif self.jump == 'random':
             largs = self.spiro_args
             self.spiro_args = np.random.uniform(-199, 199,

@@ -34,31 +34,36 @@ if __name__ == "__main__":
     #ret = loop.run_until_complete(env._wait_slaves(30))
     ret = loop.run_until_complete(env.is_ready())
 
-    rand = False
-
-    critic_threshold = 0.06
+    critic_threshold = 0.08
+    veto_threshold = 0.08
+    ask_passing = True
 
     for _ in range(4):
         print(aiomas.run(until=env.spawn('agents.critic_test_agent:CriticTestAgent',
                                          desired_novelty=-1,
                                          log_folder=log_folder,
-                                         memsize=5,
-                                         critic_threshold=critic_threshold)))
+                                         memsize=10,
+                                         critic_threshold=critic_threshold,
+                                         veto_threshold=veto_threshold,
+                                         ask_passing=ask_passing)))
 
     for _ in range(1):
         print(aiomas.run(until=env.spawn('agents.critic_test_agent:CriticTestAgent',
                                          desired_novelty=-1,
                                          log_folder=log_folder,
-                                         memsize=30,
-                                         critic_threshold=critic_threshold)))
+                                         memsize=60,
+                                         critic_threshold=critic_threshold,
+                                         veto_threshold=veto_threshold,
+                                         ask_passing=ask_passing)))
 
     env.set_agent_acquaintances()
 
     sim = Simulation(env=env, log_folder=log_folder, callback=env.vote_and_save_info)
-    sim.async_steps(100)
+    sim.async_steps(500)
     acquaintance_counts = env.get_acquaintance_counts()
     acquaintance_values = env.get_acquaintance_values()
     total_comparisons = env.get_comparison_count()
+    env._calc_distances()
     sim.end()
 
     for acquaintance, counts in acquaintance_counts.items():
