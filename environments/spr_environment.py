@@ -1,8 +1,7 @@
-from creamas.mp import MultiEnvironment
-import asyncio
+from creamas.examples.spiro.spiro_agent_mp import SpiroMultiEnvironment
 import aiomas
 
-class SprEnvironment(MultiEnvironment):
+class SprEnvironment(SpiroMultiEnvironment):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -61,3 +60,17 @@ class SprEnvironment(MultiEnvironment):
             total_comparisons += aiomas.run(until=agent.get_comparison_count())
 
         return total_comparisons
+
+    def destroy(self, folder=None):
+        '''Destroy the environment and the subprocesses.
+        '''
+        #ameans = [(0, 0, 0) for _ in range(3)]
+        #ret = [self.save_info(folder, ameans)]
+        rets = aiomas.run(until=self._destroy_slaves(folder))
+        #rets = ret + rets
+        # Close and join the process pool nicely.
+        self._pool.close()
+        self._pool.terminate()
+        self._pool.join()
+        self._env.shutdown()
+        return rets

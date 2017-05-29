@@ -38,6 +38,8 @@ class CriticTestAgent(SpiroAgent):
     async def act(self):
         artifact = self.invent(10)
 
+        self.added_last = False
+
         args = artifact.framings[self.name]['args']
         val = artifact.evals[self.name]
         self.spiro_args = args
@@ -60,6 +62,8 @@ class CriticTestAgent(SpiroAgent):
                 self.bandit_learner.give_reward(bandit, -1)
             else:
                 self.bandit_learner.give_reward(bandit, 1)
+                self.env.add_candidate(artifact)
+                self.added_last = True
         elif self.jump == 'random':
             largs = self.spiro_args
             self.spiro_args = np.random.uniform(-199, 199,

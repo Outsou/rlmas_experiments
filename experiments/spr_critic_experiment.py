@@ -1,7 +1,7 @@
 from environments.spr_environment import SprEnvironment
 from creamas.core.simulation import Simulation
-from creamas.mp import MultiEnvManager
-from creamas.mp import EnvManager
+from creamas.examples.spiro.spiro_agent_mp import SpiroMultiEnvManager
+from creamas.examples.spiro.spiro_agent_mp import SpiroEnvManager
 from creamas.core.environment import Environment
 import logging
 import asyncio
@@ -22,9 +22,9 @@ if __name__ == "__main__":
              ]
 
     env = SprEnvironment(addr, env_cls=Environment,
-                         mgr_cls=MultiEnvManager,
+                         mgr_cls=SpiroMultiEnvManager,
                          slave_env_cls=Environment,
-                         slave_mgr_cls=EnvManager,
+                         slave_mgr_cls=SpiroEnvManager,
                          slave_addrs=addrs, log_folder=log_folder,
                          log_level=logging.INFO,
                          extra_ser=[get_spriro_ser_mp])
@@ -54,8 +54,8 @@ if __name__ == "__main__":
 
     env.set_agent_acquaintances()
 
-    sim = Simulation(env=env, log_folder=log_folder)
-    sim.async_steps(100)
+    sim = Simulation(env=env, log_folder=log_folder, callback=env.vote_and_save_info)
+    sim.async_steps(5)
     acquaintance_counts = env.get_acquaintance_counts()
     acquaintance_values = env.get_acquaintance_values()
     total_comparisons = env.get_comparison_count()
