@@ -6,7 +6,7 @@ from creamas.core.environment import Environment
 import logging
 import asyncio
 import aiomas
-from utilities.serializers import get_spriro_ser_mp
+from utilities.serializers import get_spiro_ser_own
 
 import operator
 
@@ -27,11 +27,11 @@ if __name__ == "__main__":
                          slave_mgr_cls=SpiroEnvManager,
                          slave_addrs=addrs, log_folder=log_folder,
                          log_level=logging.INFO,
-                         extra_ser=[get_spriro_ser_mp])
+                         extra_ser=[get_spiro_ser_own])
 
     loop = asyncio.get_event_loop()
-    ret = loop.run_until_complete(env._set_host_managers())
-    #ret = loop.run_until_complete(env._wait_slaves(30))
+    ret = loop.run_until_complete(env.set_host_managers())
+    ret = loop.run_until_complete(env.wait_slaves(30))
     ret = loop.run_until_complete(env.is_ready())
 
     critic_threshold = 0.08
@@ -60,6 +60,7 @@ if __name__ == "__main__":
 
     sim = Simulation(env=env, log_folder=log_folder, callback=env.vote_and_save_info)
     sim.async_steps(500)
+    env._consistent = False
     acquaintance_counts = env.get_acquaintance_counts()
     acquaintance_values = env.get_acquaintance_values()
     total_comparisons = env.get_comparison_count()

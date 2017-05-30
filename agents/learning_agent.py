@@ -4,13 +4,13 @@ import numpy as np
 
 class LearningAgent(GridAgent):
 
-    def __init__(self, environment, standard_deviation = 1, *args, **kwargs):
+    def __init__(self, environment, learner, difficulty_preference, standard_deviation = 1, *args, **kwargs):
         super().__init__(environment, *args, **kwargs)
-        self.learner = kwargs.pop('learner')
+        self.learner = learner
         self.standard_deviation = standard_deviation
         self.learner.set_initial_state(0)
 
-        self.difficulty_preference = kwargs.pop('difficulty_preference')
+        self.difficulty_preference = difficulty_preference
         self.actions = []
 
     def map_actions_to_neighbors(self):

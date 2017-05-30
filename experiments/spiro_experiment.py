@@ -27,8 +27,8 @@ if __name__ == "__main__":
                                 extra_ser=[get_spiro_ser])
 
     loop = asyncio.get_event_loop()
-    ret = loop.run_until_complete(env._set_host_managers())
-    #ret = loop.run_until_complete(env._wait_slaves(30))
+    ret = loop.run_until_complete(env.set_host_managers())
+    ret = loop.run_until_complete(env.wait_slaves(30))
     ret = loop.run_until_complete(env.is_ready())
 
     # art = SprAgent(env, ((120, 120))).create(50, 100)

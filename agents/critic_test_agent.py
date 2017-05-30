@@ -1,5 +1,6 @@
 from creamas.examples.spiro.spiro_agent_mp import SpiroAgent
 from rl.bandit_learner import BanditLearner
+from artifacts.spr_artifact import SpiroArtifact
 
 import aiomas
 import numpy as np
@@ -147,3 +148,30 @@ class CriticTestAgent(SpiroAgent):
                 self._log(logging.INFO,
                           "Jumped from {} to {}".format(largs, self.spiro_args))
         return valid
+
+    def invent(self, n):
+        '''Invent new spirograph by taking n random steps from current position
+        (spirograph generation parameters) and selecting the best one based
+        on the agent's evaluation (hedonic function).
+        :param int n: how many spirographs are created for evaluation
+        :returns: Best created artifact.
+        :rtype: :py:class:`~creamas.core.agent.Artifact`
+        '''
+        args = self.randomize_args()
+        img = self.create(args[0], args[1])
+        best_artifact = SpiroArtifact(self, img, domain='image')
+        ev, _ = self.evaluate(best_artifact)
+        best_artifact.add_eval(self, ev, fr={'args': args})
+        for i in range(n-1):
+            args = self.randomize_args()
+            img = self.create(args[0], args[1])
+            artifact = SpiroArtifact(self, img, domain='image')
+            ev, _ = self.evaluate(artifact)
+            artifact.add_eval(self, ev, fr={'args': args})
+            if ev > best_artifact.evals[self.name]:
+                best_artifact = artifact
+        self.spiro_args = best_artifact.framings[self.name]['args']
+        best_artifact.in_domain = False
+        best_artifact.self_criticism = 'reject'
+        best_artifact.creation_time = self.age
+        return best_artifact
