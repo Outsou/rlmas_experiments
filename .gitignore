@@ -1,6 +1,7 @@
 .idea/
 *.jpg
 movement_logs/
+*.p
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
