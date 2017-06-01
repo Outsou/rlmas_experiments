@@ -30,11 +30,11 @@ if __name__ == "__main__":
     num_of_normal_agents = 4
     num_of_critics = 1
 
-    #critic_type = 'agents.critic_test_agent:CriticTestAgent'
-    critic_type = 'agents.critic_only_agent:CriticOnlyAgent'
+    critic_type = 'agents.critic_test_agent:CriticTestAgent'
+    #critic_type = 'agents.critic_only_agent:CriticOnlyAgent'
 
     num_of_artifacts = 400
-    num_of_simulations = 5
+    num_of_simulations = 1
     num_of_steps = 10
 
     use_steps = False # Stop when enough steps or when enough artifacts
@@ -104,6 +104,8 @@ if __name__ == "__main__":
         num_of_accepted_artifacts = len(env.artifacts)
         artifacts = env.artifacts
         last_changes = env.get_last_best_acquaintance_changes()
+        overcame_own_threshold_counts = env.get_get_overcame_own_threshold_counts()
+        steps = env.age
 
         sim.end()
 
@@ -160,6 +162,15 @@ if __name__ == "__main__":
         for creator, count in creator_counts.items():
             print('Agent {} created {} accepted artifacts'.format(creator, count))
 
+
+        print()
+
+        # Print overcoming own thershold counts
+        for name, count in overcame_own_threshold_counts.items():
+            print('{} overcame itself {}/{} times'.format(name, count, steps))
+
+        print()
+
         # Calculate gini coefficient of accepted artifacts
         gini_coef = gini(np.array(list(creator_counts.values())).astype(float))
         print('\nGini coefficient for amount of accepted artifacts: ' + str(gini_coef))
@@ -170,15 +181,15 @@ if __name__ == "__main__":
         stats['gini'].append(gini_coef)
         stats['bestie_find_speed'].append(last_changes)
 
-    #Create result directory if needed
-    directory = 'results'
-    if not os.path.exists(directory):
-        os.makedirs(directory)
-
-    file = "{}/stats_mem{}-{}_artifacts{}_{}.p".format(directory, normal_mem, critic_mem, num_of_artifacts, critic_type)
-    pickle.dump(stats, open(file, "wb"))
-
-    analyze(file)
+    # #Create result directory if needed
+    # directory = 'results'
+    # if not os.path.exists(directory):
+    #     os.makedirs(directory)
+    #
+    # file = "{}/stats_mem{}-{}_artifacts{}_{}.p".format(directory, normal_mem, critic_mem, num_of_artifacts, critic_type)
+    # pickle.dump(stats, open(file, "wb"))
+    #
+    # analyze(file)
 
     # print()
     #

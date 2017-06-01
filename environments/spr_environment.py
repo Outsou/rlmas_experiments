@@ -38,30 +38,6 @@ class SprEnvironment(SpiroMultiEnvironment):
         for agent in agents:
             aiomas.run(until=agent.log_situation())
 
-    def get_acquaintance_counts(self):
-        agents = self.get_agents(address=False)
-        self._consistent = False
-
-        acquaintances = {}
-
-        for agent in agents:
-            name = aiomas.run(until=agent.get_name())
-            acquaintances[name] = aiomas.run(until=agent.get_acquaintances())
-
-        return acquaintances
-
-    def get_acquaintance_values(self):
-        agents = self.get_agents(address=False)
-        self._consistent = False
-
-        acquaintance_values = {}
-
-        for agent in agents:
-            name = aiomas.run(until=agent.get_name())
-            acquaintance_values[name] = aiomas.run(until=agent.get_acquaintance_values())
-
-        return acquaintance_values
-
     def get_comparison_count(self):
         agents = self.get_agents(address=False)
         self._consistent = False
@@ -74,16 +50,29 @@ class SprEnvironment(SpiroMultiEnvironment):
         return total_comparisons
 
     def get_last_best_acquaintance_changes(self):
+        return self.get_dictionary('get_last_best_acquaintance_change')
+
+    def get_acquaintance_counts(self):
+        return self.get_dictionary('get_acquaintances')
+
+    def get_acquaintance_values(self):
+        return self.get_dictionary('get_acquaintance_values')
+
+    def get_get_overcame_own_threshold_counts(self):
+        return self.get_dictionary('get_overcame_own_threshold_count')
+
+    def get_dictionary(self, func_name):
         agents = self.get_agents(address=False)
         self._consistent = False
 
-        last_changes = {}
+        dict = {}
 
         for agent in agents:
             name = aiomas.run(until=agent.get_name())
-            last_changes[name] = aiomas.run(until=agent.get_last_best_acquaintance_change())
+            func = getattr(agent, func_name)
+            dict[name] = aiomas.run(until=func())
 
-        return last_changes
+        return dict
 
     def destroy(self, folder=None):
         '''Destroy the environment and the subprocesses.

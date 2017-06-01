@@ -15,6 +15,7 @@ class CriticTestAgent(SpiroAgent):
         self.name = "{}_M{}".format(self.name, self.stmem.length)
         self.validated_something = False
         self.ask_passing = ask_passing
+        self.overcame_own_threshold_count = 0
 
     @aiomas.expose
     def set_acquaintances(self, addresses):
@@ -53,6 +54,7 @@ class CriticTestAgent(SpiroAgent):
         self.add_artifact(artifact)
 
         if val >= self._own_threshold:
+            self.overcame_own_threshold_count += 1
             artifact.self_criticism = 'pass'
             # Train SOM with the invented artifact
             self.learn(artifact, self.teaching_iterations)
@@ -98,6 +100,10 @@ class CriticTestAgent(SpiroAgent):
     @aiomas.expose
     def get_comparison_count(self):
         return self.comparison_count
+
+    @aiomas.expose
+    def get_overcame_own_threshold_count(self):
+        return self.overcame_own_threshold_count
 
     @aiomas.expose
     def get_acquaintance_values(self):

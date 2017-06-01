@@ -20,7 +20,7 @@ class CriticOnlyAgent(CriticTestAgent):
 
         if evaluation >= self._novelty_threshold:
             artifact.add_eval(self, evaluation)
-            self.learn(artifact, self.teaching_iterations)
+            #self.learn(artifact, self.teaching_iterations)
             return True, artifact
         else:
             return False, artifact
