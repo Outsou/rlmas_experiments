@@ -108,6 +108,10 @@ class CriticTestAgent(SpiroAgent):
 
         return acquaintance_values
 
+    @aiomas.expose
+    def get_last_best_acquaintance_change(self):
+        return self.bandit_learner.last_max_change
+
     def evaluate(self, artifact):
         '''Evaluate the artifact with respect to the agents short term memory.
 

@@ -17,6 +17,27 @@ import os
 
 
 if __name__ == "__main__":
+
+    # ALL PARAMETERS
+
+    critic_threshold = 0.08
+    veto_threshold = 0.08
+    ask_passing = True
+
+    normal_mem = 10
+    critic_mem = 60
+
+    num_of_normal_agents = 4
+    num_of_critics = 1
+
+    num_of_artifacts = 400
+    num_of_simulations = 5
+    num_of_steps = 500
+
+    use_steps = True # Stop when enough steps or when enough artifacts
+
+    # Other stuff
+
     log_folder = 'critic_logs'
 
     addr = ('localhost', 5555)
@@ -26,10 +47,10 @@ if __name__ == "__main__":
              ('localhost', 5563)
              ]
 
-    stats = {'comps': [], 'novelty': [], 'gini': []}
+    stats = {'comps': [], 'novelty': [], 'gini': [], 'bestie_find_speed': []}
 
     # Run simulation x times and record stats
-    for _ in range(5):
+    for _ in range(num_of_simulations):
 
         env = SprEnvironment(addr, env_cls=Environment,
                              mgr_cls=SpiroMultiEnvManager,
@@ -44,16 +65,7 @@ if __name__ == "__main__":
         ret = loop.run_until_complete(env.wait_slaves(30))
         ret = loop.run_until_complete(env.is_ready())
 
-        critic_threshold = 0.08
-        veto_threshold = 0.08
-        ask_passing = True
-
-        normal_mem = 20
-        critic_mem = 20
-
-        num_of_artifacts = 400
-
-        for _ in range(4):
+        for _ in range(num_of_normal_agents):
             print(aiomas.run(until=env.spawn('agents.critic_test_agent:CriticTestAgent',
                                              desired_novelty=-1,
                                              log_folder=log_folder,
@@ -62,7 +74,7 @@ if __name__ == "__main__":
                                              veto_threshold=veto_threshold,
                                              ask_passing=ask_passing)))
 
-        for _ in range(1):
+        for _ in range(num_of_critics):
             print(aiomas.run(until=env.spawn('agents.critic_test_agent:CriticTestAgent',
                                              desired_novelty=-1,
                                              log_folder=log_folder,
@@ -75,10 +87,11 @@ if __name__ == "__main__":
 
         sim = Simulation(env=env, log_folder=log_folder, callback=env.vote_and_save_info)
 
-        while len(env.artifacts) <= num_of_artifacts:
-             sim.async_step()
-
-        #sim.async_steps(500)
+        if use_steps:
+            sim.async_steps(num_of_steps)
+        else:
+            while len(env.artifacts) <= num_of_artifacts:
+                 sim.async_step()
 
         env._consistent = False
         acquaintance_counts = env.get_acquaintance_counts()
@@ -87,6 +100,8 @@ if __name__ == "__main__":
         mean, _, _ = env._calc_distances()
         num_of_accepted_artifacts = len(env.artifacts)
         artifacts = env.artifacts
+        last_changes = env.get_last_best_acquaintance_changes()
+
         sim.end()
 
         # Print who chose who and how many times
@@ -104,6 +119,12 @@ if __name__ == "__main__":
             acquaintance_avgs[acquaintance[:22]] = 0
             print(acquaintance)
             print(values)
+
+        print()
+
+        # Print when agents had learned their best friend
+        for name, last_change in last_changes.items():
+            print('{} learned best friend at iteration: {}'.format(name, last_change))
 
         print()
 
@@ -144,13 +165,21 @@ if __name__ == "__main__":
         stats['comps'].append(total_comparisons)
         stats['novelty'].append(mean)
         stats['gini'].append(gini_coef)
+        stats['bestie_find_speed'].append(last_changes)
 
     # Create result directory if needed
-    directory = 'results'
-    if not os.path.exists(directory):
-        os.makedirs(directory)
+    # directory = 'results'
+    # if not os.path.exists(directory):
+    #     os.makedirs(directory)
+    #
+    # file = "{}/stats_mem{}-{}_artifacts{}.p".format(directory, normal_mem, critic_mem, num_of_artifacts)
+    # pickle.dump(stats, open(file, "wb"))
+    #
+    # analyze(file)
 
-    file = "{}/stats_mem{}-{}_artifacts{}.p".format(directory, normal_mem, critic_mem, num_of_artifacts)
-    pickle.dump(stats, open(file, "wb"))
+    print()
 
-    analyze(file)
+    for data in stats['bestie_find_speed']:
+        for name, last_change in data.items():
+            print('{} learned best friend at iteration: {}'.format(name, last_change))
+        print()

@@ -73,6 +73,18 @@ class SprEnvironment(SpiroMultiEnvironment):
 
         return total_comparisons
 
+    def get_last_best_acquaintance_changes(self):
+        agents = self.get_agents(address=False)
+        self._consistent = False
+
+        last_changes = {}
+
+        for agent in agents:
+            name = aiomas.run(until=agent.get_name())
+            last_changes[name] = aiomas.run(until=agent.get_last_best_acquaintance_change())
+
+        return last_changes
+
     def destroy(self, folder=None):
         '''Destroy the environment and the subprocesses.
         '''
