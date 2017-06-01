@@ -30,11 +30,14 @@ if __name__ == "__main__":
     num_of_normal_agents = 4
     num_of_critics = 1
 
+    #critic_type = 'agents.critic_test_agent:CriticTestAgent'
+    critic_type = 'agents.critic_only_agent:CriticOnlyAgent'
+
     num_of_artifacts = 400
     num_of_simulations = 5
-    num_of_steps = 500
+    num_of_steps = 10
 
-    use_steps = True # Stop when enough steps or when enough artifacts
+    use_steps = False # Stop when enough steps or when enough artifacts
 
     # Other stuff
 
@@ -75,7 +78,7 @@ if __name__ == "__main__":
                                              ask_passing=ask_passing)))
 
         for _ in range(num_of_critics):
-            print(aiomas.run(until=env.spawn('agents.critic_test_agent:CriticTestAgent',
+            print(aiomas.run(until=env.spawn(critic_type,
                                              desired_novelty=-1,
                                              log_folder=log_folder,
                                              memsize=critic_mem,
@@ -167,19 +170,19 @@ if __name__ == "__main__":
         stats['gini'].append(gini_coef)
         stats['bestie_find_speed'].append(last_changes)
 
-    # Create result directory if needed
-    # directory = 'results'
-    # if not os.path.exists(directory):
-    #     os.makedirs(directory)
-    #
-    # file = "{}/stats_mem{}-{}_artifacts{}.p".format(directory, normal_mem, critic_mem, num_of_artifacts)
-    # pickle.dump(stats, open(file, "wb"))
-    #
-    # analyze(file)
+    #Create result directory if needed
+    directory = 'results'
+    if not os.path.exists(directory):
+        os.makedirs(directory)
 
-    print()
+    file = "{}/stats_mem{}-{}_artifacts{}_{}.p".format(directory, normal_mem, critic_mem, num_of_artifacts, critic_type)
+    pickle.dump(stats, open(file, "wb"))
 
-    for data in stats['bestie_find_speed']:
-        for name, last_change in data.items():
-            print('{} learned best friend at iteration: {}'.format(name, last_change))
-        print()
+    analyze(file)
+
+    # print()
+    #
+    # for data in stats['bestie_find_speed']:
+    #     for name, last_change in data.items():
+    #         print('{} learned best friend at iteration: {}'.format(name, last_change))
+    #     print()

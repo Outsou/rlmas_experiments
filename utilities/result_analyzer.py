@@ -9,12 +9,14 @@ def analyze(file):
     print('Means:')
 
     for key, value in stats.items():
-        print('{}: {}'.format(key, statistics.mean(value)))
+        if all(isinstance(x, (float, int)) for x in value):
+            print('{}: {}'.format(key, statistics.mean(value)))
 
     print('\nGini coefficients:')
 
     for key, value in stats.items():
-        print('{}: {}'.format(key, gini(np.array(value).astype(float))))
+        if all(isinstance(x, (float, int)) for x in value):
+            print('{}: {}'.format(key, gini(np.array(value).astype(float))))
 
 
 
