@@ -8,15 +8,15 @@ import aiomas
 
 class CriticEqualAgent(CriticTestAgent):
 
-    def __init__(self, environment, invent_n=120, *args, **kwargs):
+    def __init__(self, environment, memory_states, initial_state = 0, invent_n=120, *args, **kwargs):
         super().__init__(environment, invent_n, *args, **kwargs)
         self.name = self.addr
         self.creation_reward = 0
         self.criticism_reward = 0
-        self.memory_states = (10, 60)
-        self.memory_state_time = [0] * len(self.memory_states)
+        self.memory_states = memory_states
+        self.memory_state_times = [0] * len(self.memory_states)
         self.memory_learner = BanditLearner(len(self.memory_states))
-        self.current_memory_state = 0
+        self.current_memory_state = initial_state
         self.stmem = STMemory2(self.memory_states[0])
         self.invent_n = invent_n
 
@@ -33,7 +33,7 @@ class CriticEqualAgent(CriticTestAgent):
     def process_rewards(self):
         '''Called after voting, so agent can process all the reward gained at once'''
         # Record in which state this time step was spent
-        self.memory_state_time[self.current_memory_state] += 1
+        self.memory_state_times[self.current_memory_state] += 1
 
         # Reward is the sum of creation and criticism rewards of this time step
         self.memory_learner.give_reward(self.current_memory_state,
@@ -113,6 +113,10 @@ class CriticEqualAgent(CriticTestAgent):
         if self.desired_novelty > 0:
             return self.hedonic_value(self.novelty(artifact.obj))
         return self.novelty(artifact.obj) / self.img_size, None
+
+    @aiomas.expose
+    def get_memory_state_times(self):
+        return self.memory_state_times
 
 class STMemory2():
 

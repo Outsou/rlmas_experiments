@@ -35,3 +35,6 @@ class SprEnvironmentEqual(SprEnvironment):
         self._consistent = False
         for agent in agents:
             aiomas.run(until=agent.process_rewards())
+
+    def get_memory_state_times(self):
+        return self.get_dictionary('get_memory_state_times')
