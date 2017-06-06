@@ -31,7 +31,7 @@ if __name__ == "__main__":
     num_of_simulations = 5
     num_of_steps = 10
 
-    use_steps = True # Stop when enough steps or when enough artifacts
+    use_steps = False # Stop when enough steps or when enough artifacts
 
     # Other stuff
 
@@ -78,7 +78,7 @@ if __name__ == "__main__":
         if use_steps:
             sim.async_steps(num_of_steps)
         else:
-            while len(env.artifacts) <= num_of_artifacts:
+            while len(env.artifacts) < num_of_artifacts:
                  sim.async_step()
 
         env._consistent = False

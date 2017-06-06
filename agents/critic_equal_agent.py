@@ -14,6 +14,7 @@ class CriticEqualAgent(CriticTestAgent):
         self.creation_reward = 0
         self.criticism_reward = 0
         self.memory_states = (10, 60)
+        self.memory_state_time = [0] * len(self.memory_states)
         self.memory_learner = BanditLearner(len(self.memory_states))
         self.current_memory_state = 0
         self.stmem = STMemory2(self.memory_states[0])
@@ -31,14 +32,25 @@ class CriticEqualAgent(CriticTestAgent):
     @aiomas.expose
     def process_rewards(self):
         '''Called after voting, so agent can process all the reward gained at once'''
+        # Record in which state this time step was spent
+        self.memory_state_time[self.current_memory_state] += 1
+
+        # Reward is the sum of creation and criticism rewards of this time step
         self.memory_learner.give_reward(self.current_memory_state,
                                         self.creation_reward + self.criticism_reward)
+
+        # Set rewards to zero for next time step
         self.creation_reward = 0
         self.criticism_reward = 0
 
+        # Choose next memory state
+        self.current_memory_state = self.memory_learner.choose_bandit()
+        self.stmem.length = self.memory_states[self.current_memory_state]
+
     @aiomas.expose
     async def act(self):
-        invent_n = self.invent_n/self.memory_states[self.current_memory_state]
+        # Invent artifact using constant amount of comparisons
+        invent_n = self.invent_n / self.memory_states[self.current_memory_state]
         artifact = self.invent(int(invent_n))
 
         self.added_last = False
@@ -86,6 +98,22 @@ class CriticEqualAgent(CriticTestAgent):
         if spiro.creator == self.name:
             self.creation_reward += 1
 
+    def evaluate(self, artifact):
+        '''Evaluate the artifact with respect to the agents short term memory.
+
+        Returns value in [0, 1].
+        '''
+
+        if self.name in artifact.evals:
+            return artifact.evals[self.name], None
+
+        # Keep track of comparisons
+        self.comparison_count += self.stmem.get_comparison_amount()
+
+        if self.desired_novelty > 0:
+            return self.hedonic_value(self.novelty(artifact.obj))
+        return self.novelty(artifact.obj) / self.img_size, None
+
 class STMemory2():
 
     '''Agent's short-term memory model using a simple list which stores
@@ -115,13 +143,17 @@ class STMemory2():
         if len(self.artifacts) == 0:
             return np.random.random()*mdist
 
-        if len(self.artifacts) < self.length:
-            limit = len(self.artifacts)
-        else:
-            limit = self.length
+        limit = self.get_comparison_amount()
 
         for i in range(limit):
             d = np.sqrt(np.sum(np.square(self.artifacts[i] - artifact)))
             if d < mdist:
                 mdist = d
         return mdist
+
+    def get_comparison_amount(self):
+        if len(self.artifacts) < self.length:
+            amount = len(self.artifacts)
+        else:
+            amount = self.length
+        return amount
