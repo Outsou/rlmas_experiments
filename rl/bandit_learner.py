@@ -27,8 +27,8 @@ class BanditLearner():
                 self.max_bandit = max
                 self.last_max_change = self.iteration_count
 
-    def choose_bandit(self, e=0.2):
-        if np.random.rand(1) < e:
+    def choose_bandit(self, e=0.2, rand = False):
+        if rand or np.random.rand(1) < e:
             bandit = np.random.randint(len(self.bandits))
         else:
             bandit = self.max_bandit

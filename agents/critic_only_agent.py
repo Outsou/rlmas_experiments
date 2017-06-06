@@ -16,6 +16,7 @@ class CriticOnlyAgent(CriticTestAgent):
 
     @aiomas.expose
     def ask_if_passes(self, artifact):
+        self.opinion_asked_count += 1
         evaluation, _ = self.evaluate(artifact)
 
         if evaluation >= self._novelty_threshold:
@@ -23,4 +24,5 @@ class CriticOnlyAgent(CriticTestAgent):
             #self.learn(artifact, self.teaching_iterations)
             return True, artifact
         else:
+            self.rejection_count += 1
             return False, artifact

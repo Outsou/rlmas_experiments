@@ -9,13 +9,17 @@ import logging
 
 class CriticTestAgent(SpiroAgent):
 
-    def __init__(self, environment, ask_passing=True, *args, **kwargs):
+    def __init__(self, environment, invent_n, ask_passing=True, rand=False, *args, **kwargs):
         super().__init__(environment, *args, **kwargs)
         self.comparison_count = 0
         self.name = "{}_M{}".format(self.name, self.stmem.length)
         self.validated_something = False
         self.ask_passing = ask_passing
         self.overcame_own_threshold_count = 0
+        self.rejection_count = 0
+        self.opinion_asked_count = 0
+        self.rand = rand
+        self.invent_n = invent_n
 
     @aiomas.expose
     def set_acquaintances(self, addresses):
@@ -32,6 +36,7 @@ class CriticTestAgent(SpiroAgent):
 
     @aiomas.expose
     def ask_if_passes(self, artifact):
+        self.opinion_asked_count += 1
         evaluation, _ = self.evaluate(artifact)
 
         if evaluation >= self._novelty_threshold:
@@ -39,11 +44,12 @@ class CriticTestAgent(SpiroAgent):
             #self.learn(artifact, self.teaching_iterations)
             return True, artifact
         else:
+            self.rejection_count += 1
             return False, artifact
 
     @aiomas.expose
     async def act(self):
-        artifact = self.invent(10)
+        artifact = self.invent(self.invent_n)
 
         self.added_last = False
 
@@ -62,7 +68,7 @@ class CriticTestAgent(SpiroAgent):
             # Check with another agent if the artifact is novel enough
             if self.ask_passing:
                 # Ask someone for veto
-                bandit = self.bandit_learner.choose_bandit()
+                bandit = self.bandit_learner.choose_bandit(rand=self.rand)
                 acquaintance = self.acquaintances[bandit]
                 acquaintance[1] += 1
 
@@ -104,6 +110,10 @@ class CriticTestAgent(SpiroAgent):
     @aiomas.expose
     def get_overcame_own_threshold_count(self):
         return self.overcame_own_threshold_count
+
+    @aiomas.expose
+    def get_criticism_stats(self):
+        return self.rejection_count, self.opinion_asked_count
 
     @aiomas.expose
     def get_acquaintance_values(self):

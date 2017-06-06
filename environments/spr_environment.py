@@ -10,17 +10,17 @@ class SprEnvironment(SpiroMultiEnvironment):
         super().__init__(*args, **kwargs)
 
     def set_agent_acquaintances(self):
-        agents = self.get_agents(address=False)
+        agents = self.get_agents(addr=False)
         self._consistent = False
 
-        addresses = self.get_agents(address=True)
+        addresses = self.get_agents(addr=True)
         self._consistent = False
 
         for agent in agents:
             aiomas.run(until=agent.set_acquaintances(addresses))
 
     def get_total_reward(self):
-        agents = self.get_agents(address=False)
+        agents = self.get_agents(addr=False)
         self._consistent = False
 
         total_reward = 0
@@ -32,14 +32,14 @@ class SprEnvironment(SpiroMultiEnvironment):
 
     def log_situation(self, step):
         self._consistent = False
-        agents = self.get_agents(address=False)
+        agents = self.get_agents(addr=False)
         self._consistent = False
 
         for agent in agents:
             aiomas.run(until=agent.log_situation())
 
     def get_comparison_count(self):
-        agents = self.get_agents(address=False)
+        agents = self.get_agents(addr=False)
         self._consistent = False
 
         total_comparisons = 0
@@ -58,11 +58,14 @@ class SprEnvironment(SpiroMultiEnvironment):
     def get_acquaintance_values(self):
         return self.get_dictionary('get_acquaintance_values')
 
-    def get_get_overcame_own_threshold_counts(self):
+    def get_overcame_own_threshold_counts(self):
         return self.get_dictionary('get_overcame_own_threshold_count')
 
+    def get_criticism_stats(self):
+        return self.get_dictionary('get_criticism_stats')
+
     def get_dictionary(self, func_name):
-        agents = self.get_agents(address=False)
+        agents = self.get_agents(addr=False)
         self._consistent = False
 
         dict = {}
@@ -88,7 +91,7 @@ class SprEnvironment(SpiroMultiEnvironment):
         self._env.shutdown()
         return rets
 
-    def validate_candidates(self):
+    def _validate_candidates(self):
         '''Validate current candidates in the environment by pruning candidates
         that are not validated at least by one agent, i.e. they are vetoed.
 

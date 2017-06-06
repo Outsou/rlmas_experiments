@@ -1,4 +1,4 @@
-from environments.spr_environment import SprEnvironment
+from environments.spr_environment_equal import SprEnvironmentEqual
 from creamas.core.simulation import Simulation
 from creamas.examples.spiro.spiro_agent_mp import SpiroMultiEnvManager
 from creamas.examples.spiro.spiro_agent_mp import SpiroEnvManager
@@ -25,26 +25,17 @@ if __name__ == "__main__":
     ask_passing = True
     random_choosing = False
 
-    normal_mem = 10
-    critic_mem = 60
-    normal_invent_n = 12
-    critic_invent_n = 2
-
-    num_of_normal_agents = 4
-    num_of_critics = 1
-
-    critic_type = 'agents.critic_test_agent:CriticTestAgent'
-    #critic_type = 'agents.critic_only_agent:CriticOnlyAgent'
+    num_of_agents = 5
 
     num_of_artifacts = 400
     num_of_simulations = 5
     num_of_steps = 10
 
-    use_steps = False # Stop when enough steps or when enough artifacts
+    use_steps = True # Stop when enough steps or when enough artifacts
 
     # Other stuff
 
-    log_folder = 'critic_logs'
+    log_folder = 'equal_logs'
 
     addr = ('localhost', 5555)
     addrs = [('localhost', 5560),
@@ -58,7 +49,7 @@ if __name__ == "__main__":
     # Run simulation x times and record stats
     for _ in range(num_of_simulations):
 
-        env = SprEnvironment(addr, env_cls=Environment,
+        env = SprEnvironmentEqual(addr, env_cls=Environment,
                              mgr_cls=SpiroMultiEnvManager,
                              slave_env_cls=Environment,
                              slave_mgr_cls=SpiroEnvManager,
@@ -71,27 +62,14 @@ if __name__ == "__main__":
         ret = loop.run_until_complete(env.wait_slaves(30, check_ready=True))
         ret = loop.run_until_complete(env.is_ready())
 
-        for _ in range(num_of_normal_agents):
-            print(aiomas.run(until=env.spawn('agents.critic_test_agent:CriticTestAgent',
+        for _ in range(num_of_agents):
+            print(aiomas.run(until=env.spawn('agents.critic_equal_agent:CriticEqualAgent',
                                              desired_novelty=-1,
                                              log_folder=log_folder,
-                                             memsize=normal_mem,
                                              critic_threshold=critic_threshold,
                                              veto_threshold=veto_threshold,
                                              ask_passing=ask_passing,
-                                             rand=random_choosing,
-                                             invent_n=normal_invent_n)))
-
-        for _ in range(num_of_critics):
-            print(aiomas.run(until=env.spawn(critic_type,
-                                             desired_novelty=-1,
-                                             log_folder=log_folder,
-                                             memsize=critic_mem,
-                                             critic_threshold=critic_threshold,
-                                             veto_threshold=veto_threshold,
-                                             ask_passing=ask_passing,
-                                             rand=random_choosing,
-                                             invent_n=critic_invent_n)))
+                                             rand=random_choosing)))
 
         env.set_agent_acquaintances()
 
@@ -196,11 +174,11 @@ if __name__ == "__main__":
         stats['bestie_find_speed'].append(last_changes)
 
     #Create result directory if needed
-    directory = 'results'
+    directory = 'results_equal'
     if not os.path.exists(directory):
         os.makedirs(directory)
 
-    file = "{}/stats_mem{}-{}_artifacts{}_{}.p".format(directory, normal_mem, critic_mem, num_of_artifacts, critic_type)
+    file = "{}/stats_artifacts{}.p".format(directory, num_of_artifacts)
     pickle.dump(stats, open(file, "wb"))
 
     analyze(file)
