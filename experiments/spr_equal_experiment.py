@@ -24,11 +24,11 @@ if __name__ == "__main__":
     veto_threshold = 0.08
     ask_passing = True
     random_choosing = False
-    memory_states = (10, 60)
-    initial_state = 1
+    memory_states = (5, 80)
+    initial_state = 0
+    invent_n = 80
 
     num_of_agents = 5
-
     num_of_artifacts = 400
     num_of_simulations = 5
     num_of_steps = 10
@@ -73,7 +73,8 @@ if __name__ == "__main__":
                                              ask_passing=ask_passing,
                                              rand=random_choosing,
                                              memory_states=memory_states,
-                                             initial_state=initial_state)))
+                                             initial_state=initial_state,
+                                             invent_n=invent_n)))
 
         env.set_agent_acquaintances()
 

@@ -38,3 +38,10 @@ class SprEnvironmentEqual(SprEnvironment):
 
     def get_memory_state_times(self):
         return self.get_dictionary('get_memory_state_times')
+
+    def reset_agents(self):
+        agents = self.get_agents(addr=False)
+        self._consistent = False
+
+        for agent in agents:
+            aiomas.run(until=agent.reset())
