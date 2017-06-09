@@ -49,6 +49,8 @@ class CriticTestAgent(SpiroAgent):
 
     @aiomas.expose
     async def act(self):
+        self.bandit_learner.increment_iteration_count()
+
         artifact = self.invent(self.invent_n)
 
         self.added_last = False

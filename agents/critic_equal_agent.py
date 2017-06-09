@@ -49,6 +49,8 @@ class CriticEqualAgent(CriticTestAgent):
 
     @aiomas.expose
     async def act(self):
+        self.bandit_learner.increment_iteration_count()
+
         # Invent artifact using constant amount of comparisons
         invent_n = self.invent_n / self.memory_states[self.current_memory_state]
         artifact = self.invent(int(invent_n))
@@ -122,13 +124,14 @@ class STMemory2():
 
     '''Agent's short-term memory model using a simple list which stores
     artifacts as is.'''
-    def __init__(self, length):
+    def __init__(self, length, max_length = 100):
         self.length = length
         self.artifacts = []
+        self.max_length = max_length
 
     def _add_artifact(self, artifact):
-        # if len(self.artifacts) == self.length:
-        #     self.artifacts = self.artifacts[:-1]
+        if len(self.artifacts) >= 2 * self.max_length:
+            self.artifacts = self.artifacts[:self.max_length]
         self.artifacts.insert(0, artifact)
 
     def learn(self, artifact):

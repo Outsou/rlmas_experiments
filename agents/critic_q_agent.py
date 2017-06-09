@@ -45,6 +45,8 @@ class CriticQAgent(CriticEqualAgent):
 
     @aiomas.expose
     async def act(self):
+        self.bandit_learner.increment_iteration_count()
+
         # Invent artifact using constant amount of comparisons
         invent_n = self.invent_n / self.memory_states[self.current_memory_state]
         artifact = self.invent(int(invent_n))

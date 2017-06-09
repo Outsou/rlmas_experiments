@@ -2,7 +2,7 @@
 *.jpg
 movement_logs/
 *.p
-print.txt
+*print.txt
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

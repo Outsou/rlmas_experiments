@@ -99,15 +99,18 @@ def print_and_save_stuff():
     text += '\n'
 
     # Print total rewards
+    total_reward = 0
     for agent in agents:
         reward = 0
         if agent in criticism_stats:
             reward += criticism_stats[agent][0]
         if agent in creator_counts:
             reward += creator_counts[agent]
+        total_reward += reward
         text += '{} total reward: {}\n'.format(agent, reward)
 
-    text += '\n'
+    text+= 'total total reward: ' + str(total_reward)
+    text += '\n\n'
 
     # Print memory state times
     for name, thing in memory_state_times.items():
@@ -152,7 +155,7 @@ if __name__ == "__main__":
     veto_threshold = 0.08
     ask_passing = True
     random_choosing = False
-    memory_states = (10, 60)
+    memory_states = (10, 60, 120)
     initial_state = 1
     invent_n = 120
 

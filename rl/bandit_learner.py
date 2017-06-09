@@ -23,14 +23,12 @@ class BanditLearner():
                 self.last_max_change = self.iteration_count
 
     def give_reward(self, bandit, reward):
-        self.iteration_count += 1
         self.sums[bandit] += reward
         self.counts[bandit] += 1
         self.bandits[bandit] = self.sums[bandit] / self.counts[bandit]
         self._check_max_bandit(bandit, reward)
 
     def give_reward_q_style(self, bandit, reward, discount_factor, learning_factor):
-        self.iteration_count += 1
         old_value = self.bandits[bandit]
         self.bandits[bandit] += learning_factor * (reward + discount_factor * old_value - old_value)
         self._check_max_bandit(bandit, -1)
@@ -46,3 +44,6 @@ class BanditLearner():
     def set_values(self, value):
         for i in range(len(self.bandits)):
             self.bandits[i] = value
+
+    def increment_iteration_count(self):
+        self.iteration_count += 1
