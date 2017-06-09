@@ -4,8 +4,6 @@ def softmax(values, temperature):
     e_x = np.exp((values - np.max(values)) / temperature)
     return e_x / e_x.sum()
 
-
-
 # Stolen from https://github.com/oliviaguest/gini
 def gini(array):
     """Calculate the Gini coefficient of a numpy array."""
