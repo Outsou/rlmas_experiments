@@ -11,8 +11,8 @@ if __name__ == '__main__':
     maze2_method = gt.choose_first
 
     maze1 = gt.create(40, 40, maze1_method)
-    start = (13, 13)
-    goal = (23, 23)
+    start = (1, 1)
+    goal = (1, 3)
     node, expanded, added = ms.solver(maze1, start, goal)
     path = ms.get_path(node)
     maze1 = ms.draw_path(maze1, path)

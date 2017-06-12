@@ -1,4 +1,4 @@
-from environments.spr_environment import SprEnvironment
+from environments.spr_environment_equal import SprEnvironmentEqual
 from creamas.core.simulation import Simulation
 from creamas.examples.spiro.spiro_agent_mp import SpiroMultiEnvManager
 from creamas.examples.spiro.spiro_agent_mp import SpiroEnvManager
@@ -24,18 +24,11 @@ if __name__ == "__main__":
     veto_threshold = 0.08
     ask_passing = True
     random_choosing = False
+    memory_states = (5, 80)
+    initial_state = 0
+    invent_n = 80
 
-    normal_mem = 10
-    critic_mem = 60
-    normal_invent_n = 12
-    critic_invent_n = 2
-
-    num_of_normal_agents = 4
-    num_of_critics = 1
-
-    critic_type = 'agents.critic_test_agent:CriticTestAgent'
-    #critic_type = 'agents.critic_only_agent:CriticOnlyAgent'
-
+    num_of_agents = 5
     num_of_artifacts = 400
     num_of_simulations = 5
     num_of_steps = 10
@@ -44,7 +37,7 @@ if __name__ == "__main__":
 
     # Other stuff
 
-    log_folder = 'critic_logs'
+    log_folder = 'equal_logs'
 
     addr = ('localhost', 5555)
     addrs = [('localhost', 5560),
@@ -58,7 +51,7 @@ if __name__ == "__main__":
     # Run simulation x times and record stats
     for _ in range(num_of_simulations):
 
-        env = SprEnvironment(addr, env_cls=Environment,
+        env = SprEnvironmentEqual(addr, env_cls=Environment,
                              mgr_cls=SpiroMultiEnvManager,
                              slave_env_cls=Environment,
                              slave_mgr_cls=SpiroEnvManager,
@@ -71,27 +64,17 @@ if __name__ == "__main__":
         ret = loop.run_until_complete(env.wait_slaves(30, check_ready=True))
         ret = loop.run_until_complete(env.is_ready())
 
-        for _ in range(num_of_normal_agents):
-            print(aiomas.run(until=env.spawn('agents.critic_test_agent:CriticTestAgent',
+        for _ in range(num_of_agents):
+            print(aiomas.run(until=env.spawn('spiro.critic_equal_agent:CriticEqualAgent',
                                              desired_novelty=-1,
                                              log_folder=log_folder,
-                                             memsize=normal_mem,
                                              critic_threshold=critic_threshold,
                                              veto_threshold=veto_threshold,
                                              ask_passing=ask_passing,
                                              rand=random_choosing,
-                                             invent_n=normal_invent_n)))
-
-        for _ in range(num_of_critics):
-            print(aiomas.run(until=env.spawn(critic_type,
-                                             desired_novelty=-1,
-                                             log_folder=log_folder,
-                                             memsize=critic_mem,
-                                             critic_threshold=critic_threshold,
-                                             veto_threshold=veto_threshold,
-                                             ask_passing=ask_passing,
-                                             rand=random_choosing,
-                                             invent_n=critic_invent_n)))
+                                             memory_states=memory_states,
+                                             initial_state=initial_state,
+                                             invent_n=invent_n)))
 
         env.set_agent_acquaintances()
 
@@ -100,7 +83,7 @@ if __name__ == "__main__":
         if use_steps:
             sim.async_steps(num_of_steps)
         else:
-            while len(env.artifacts) <= num_of_artifacts:
+            while len(env.artifacts) < num_of_artifacts:
                  sim.async_step()
 
         env._consistent = False
@@ -114,20 +97,36 @@ if __name__ == "__main__":
         overcame_own_threshold_counts = env.get_overcame_own_threshold_counts()
         steps = env.age
         criticism_stats = env.get_criticism_stats()
+        memory_state_times = env.get_memory_state_times()
+        agents = env.get_agents(addr=True)
 
         sim.end()
+
+        chosen_counts = {}
+
+        for agent in agents:
+            chosen_counts[agent] = 0
 
         # Print who chose who and how many times
         for acquaintance, counts in acquaintance_counts.items():
             most_chosen = max(counts, key=operator.itemgetter(1))
+
+            chosen_counts[most_chosen[0]] += 1
+
             print('Agent {} chose {} ({} times)'.format(acquaintance, most_chosen[0], most_chosen[1]))
             print(counts)
 
         print()
 
+        # Print how many times the spiro were chosen
+        for agent, count in chosen_counts.items():
+            print('{} was chosen {} times'.format(agent, count))
+
+        print()
+
         acquaintance_avgs = {}
 
-        # Print how the agents value other's opinions
+        # Print how the spiro value other's opinions
         for acquaintance, values in acquaintance_values.items():
             acquaintance_avgs[acquaintance[:22]] = 0
             print(acquaintance)
@@ -135,13 +134,13 @@ if __name__ == "__main__":
 
         print()
 
-        # Print when agents had learned their best friend
+        # Print when spiro had learned their best friend
         for name, last_change in last_changes.items():
             print('{} learned best friend at iteration: {}'.format(name, last_change))
 
         print()
 
-        # Calculate and print for each agent how the other agents value them on average
+        # Calculate and print for each agent how the other spiro value them on average
         for acquaintance, values in acquaintance_values.items():
             for agent, value in values.items():
                 acquaintance_avgs[agent] += value
@@ -158,7 +157,7 @@ if __name__ == "__main__":
 
         print('Number of accepted artifacts: ' + str(num_of_accepted_artifacts))
 
-        # Calculate and print how many times agents got their artifacts accepted
+        # Calculate and print how many times spiro got their artifacts accepted
         creator_counts = {}
 
         for artifact in artifacts:
@@ -180,8 +179,26 @@ if __name__ == "__main__":
         print()
 
         # Print criticism stats
-        for name, criticism_stats in criticism_stats.items():
-            print('{} rejected {}/{} times'.format(name, criticism_stats[0], criticism_stats[1]))
+        for name, c_stats in criticism_stats.items():
+            print('{} rejected {}/{} times'.format(name, c_stats[0], c_stats[1]))
+
+        print()
+
+        # Print total rewards
+        for agent in agents:
+            reward = 0
+            if agent in criticism_stats:
+                reward += criticism_stats[agent][0]
+            if agent in creator_counts:
+                reward += creator_counts[agent]
+            print('{} total reward: {}'.format(agent, reward))
+
+        print()
+
+        # Print memory state times
+        for name, thing in memory_state_times.items():
+            print(name)
+            print(thing)
 
         print()
 
@@ -196,11 +213,11 @@ if __name__ == "__main__":
         stats['bestie_find_speed'].append(last_changes)
 
     #Create result directory if needed
-    directory = 'results'
+    directory = 'results_equal'
     if not os.path.exists(directory):
         os.makedirs(directory)
 
-    file = "{}/stats_mem{}-{}_artifacts{}_{}.p".format(directory, normal_mem, critic_mem, num_of_artifacts, critic_type)
+    file = "{}/stats_artifacts{}.p".format(directory, num_of_artifacts)
     pickle.dump(stats, open(file, "wb"))
 
     analyze(file)

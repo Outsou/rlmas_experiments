@@ -3,6 +3,8 @@ from creamas.core.simulation import Simulation
 from creamas.examples.spiro.spiro_agent_mp import SpiroMultiEnvManager
 from creamas.examples.spiro.spiro_agent_mp import SpiroEnvManager
 from creamas.core.environment import Environment
+from creamas.logging import ObjectLogger
+from creamas.util import run
 import logging
 import asyncio
 import aiomas
@@ -34,7 +36,7 @@ def print_and_save_stuff():
 
     text += '\n'
 
-    # Print how many times the agents were chosen
+    # Print how many times the spiro were chosen
     for agent, count in chosen_counts.items():
         text += '{} was chosen {} times\n'.format(agent, count)
 
@@ -42,7 +44,7 @@ def print_and_save_stuff():
 
     acquaintance_avgs = {}
 
-    # Print how the agents value other's opinions
+    # Print how the spiro value other's opinions
     for acquaintance, values in acquaintance_values.items():
         acquaintance_avgs[acquaintance[:22]] = 0
         text += str(acquaintance) + '\n'
@@ -50,13 +52,13 @@ def print_and_save_stuff():
 
     text += '\n'
 
-    # Print when agents had learned their best friend
+    # Print when spiro had learned their best friend
     for name, last_change in last_changes.items():
         text += '{} learned best friend at iteration: {}\n'.format(name, last_change)
 
     text += '\n'
 
-    # Calculate and print for each agent how the other agents value them on average
+    # Calculate and print for each agent how the other spiro value them on average
     for acquaintance, values in acquaintance_values.items():
         for agent, value in values.items():
             acquaintance_avgs[agent] += value
@@ -72,7 +74,7 @@ def print_and_save_stuff():
 
     text += 'Number of accepted artifacts: ' + str(num_of_accepted_artifacts) + '\n'
 
-    # Calculate and print how many times agents got their artifacts accepted
+    # Calculate and print how many times spiro got their artifacts accepted
     creator_counts = {}
 
     for artifact in artifacts:
@@ -163,7 +165,7 @@ if __name__ == "__main__":
     learning_factor = 0.9
 
     num_of_agents = 5
-    num_of_artifacts = 400
+    num_of_artifacts = 10
     num_of_simulations = 5
     num_of_steps = 10
 
@@ -172,6 +174,7 @@ if __name__ == "__main__":
     # Other stuff
 
     log_folder = 'q_logs'
+    logger = None
 
     addr = ('localhost', 5555)
     addrs = [('localhost', 5560),
@@ -180,26 +183,41 @@ if __name__ == "__main__":
              ('localhost', 5563)
              ]
 
+    env_kwargs = {'extra_serializers': [get_spiro_ser_own], 'codec': aiomas.MsgPack}
+    slave_kwargs = [{'extra_serializers': [get_spiro_ser_own], 'codec': aiomas.MsgPack} for _ in range(len(addrs))]
+
     stats = {'comps': [], 'novelty': [], 'gini': [], 'bestie_find_speed': []}
 
     # Run simulation x times and record stats
     for _ in range(num_of_simulations):
 
-        env = SprEnvironmentEqual(addr, env_cls=Environment,
-                             mgr_cls=SpiroMultiEnvManager,
-                             slave_env_cls=Environment,
-                             slave_mgr_cls=SpiroEnvManager,
-                             slave_addrs=addrs, log_folder=log_folder,
-                             log_level=logging.INFO,
-                             extra_ser=[get_spiro_ser_own])
+        env = SprEnvironmentEqual(addr,
+                                  env_cls=Environment,
+                                  mgr_cls=SpiroMultiEnvManager,
+                                  logger=logger,
+                                  **env_kwargs)
+
+        # env = SprEnvironmentEqual(addr, env_cls=Environment,
+        #                      mgr_cls=SpiroMultiEnvManager,
+        #                      slave_env_cls=Environment,
+        #                      slave_mgr_cls=SpiroEnvManager,
+        #                      slave_addrs=addrs, log_folder=log_folder,
+        #                      log_level=logging.INFO,
+        #                      extra_ser=[get_spiro_ser_own])
 
         loop = asyncio.get_event_loop()
+
+        ret = run(env.spawn_slaves(slave_addrs=addrs,
+                                    slave_env_cls=Environment,
+                                    slave_mgr_cls=SpiroEnvManager,
+                                    slave_kwargs=slave_kwargs))
+
         ret = loop.run_until_complete(env.set_host_managers())
         ret = loop.run_until_complete(env.wait_slaves(30, check_ready=True))
         ret = loop.run_until_complete(env.is_ready())
 
         for _ in range(num_of_agents):
-            print(aiomas.run(until=env.spawn('agents.critic_q_agent:CriticQAgent',
+            print(aiomas.run(until=env.spawn('agents.spiro.critic_q_agent:CriticQAgent',
                                              desired_novelty=-1,
                                              log_folder=log_folder,
                                              critic_threshold=critic_threshold,

@@ -1,6 +1,7 @@
-from agents.critic_test_agent import CriticTestAgent
-
 import aiomas
+
+from agents.spiro.critic_test_agent import CriticTestAgent
+
 
 class CriticOnlyAgent(CriticTestAgent):
 

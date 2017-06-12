@@ -1,9 +1,8 @@
+import numpy as np
 from creamas.core.environment import Environment
 from creamas.core.simulation import Simulation
-from agents.moving_spr_agent import QMovingSprAgent, BasicMovingSprAgent
 
-import numpy as np
-
+from agents.spiro.moving_spr_agent import QMovingSprAgent, BasicMovingSprAgent
 
 if __name__ == "__main__":
     log_folder = 'movement_logs'

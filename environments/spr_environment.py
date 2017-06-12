@@ -96,7 +96,7 @@ class SprEnvironment(SpiroMultiEnvironment):
         that are not validated at least by one agent, i.e. they are vetoed.
 
         In larger societies this method might be costly, as it calls each
-        agents' ``validate_candidates``-method.
+        spiro' ``validate_candidates``-method.
         '''
 
         valid_candidates = set(self.candidates)

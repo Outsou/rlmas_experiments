@@ -38,18 +38,18 @@ if __name__ == "__main__":
 
     rand = False
 
-    print(aiomas.run(until=env.spawn('agents.spr_agent:SprAgent',
+    print(aiomas.run(until=env.spawn('spiro.spr_agent:SprAgent',
                                      states=((25, 25), (85, 85)),
                                      rand=rand,
                                      desired_novelty=0.001,
                                      log_folder=log_folder)))
 
-    print(aiomas.run(until=env.spawn('agents.spr_agent:SprAgent',
+    print(aiomas.run(until=env.spawn('spiro.spr_agent:SprAgent',
                                      states=((25, -25), (85, -85)),
                                      rand=rand,
                                      desired_novelty=10,
                                      log_folder=log_folder)))
-    print(aiomas.run(until=env.spawn('agents.spr_agent:SprAgent',
+    print(aiomas.run(until=env.spawn('spiro.spr_agent:SprAgent',
                                      states=((-25, 25), (-85, 85)),
                                      rand=rand,
                                      desired_novelty=10,

@@ -131,7 +131,7 @@ class CriticTestAgent(SpiroAgent):
         return self.bandit_learner.last_max_change
 
     def evaluate(self, artifact):
-        '''Evaluate the artifact with respect to the agents short term memory.
+        '''Evaluate the artifact with respect to the spiro short term memory.
 
         Returns value in [0, 1].
         '''

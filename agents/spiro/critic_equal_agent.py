@@ -1,9 +1,10 @@
-from agents.critic_test_agent import CriticTestAgent
-from rl.bandit_learner import BanditLearner
-
-import numpy as np
 import logging
+
 import aiomas
+import numpy as np
+
+from agents.spiro.critic_test_agent import CriticTestAgent
+from rl.bandit_learner import BanditLearner
 
 
 class CriticEqualAgent(CriticTestAgent):
@@ -101,7 +102,7 @@ class CriticEqualAgent(CriticTestAgent):
             self.creation_reward += 1
 
     def evaluate(self, artifact):
-        '''Evaluate the artifact with respect to the agents short term memory.
+        '''Evaluate the artifact with respect to the spiro short term memory.
 
         Returns value in [0, 1].
         '''

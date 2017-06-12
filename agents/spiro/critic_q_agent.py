@@ -1,7 +1,6 @@
-from agents.critic_equal_agent import CriticEqualAgent
-from rl.q_learner import QLearner
-
 import aiomas
+
+from agents.spiro.critic_equal_agent import CriticEqualAgent
 
 
 class CriticQAgent(CriticEqualAgent):

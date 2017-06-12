@@ -1,16 +1,14 @@
 import asyncio
 
-from creamas.core.simulation import Simulation
-from creamas.grid import GridEnvironment
-
-from agents.learning_agent import LearningAgent
-from rl.q_learner import QLearner
-
+import matplotlib.mlab as mlab
 import matplotlib.pyplot as plt
 import numpy as np
-import matplotlib.mlab as mlab
+from creamas.core.simulation import Simulation
+from creamas.grid import GridEnvironment
 from scipy.stats import norm
 
+from agents.spiro.learning_agent import LearningAgent
+from rl.q_learner import QLearner
 
 if __name__ == "__main__":
     env = GridEnvironment.create(('localhost', 5555))
