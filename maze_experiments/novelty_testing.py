@@ -21,31 +21,40 @@ if __name__ == '__main__':
         mazes2.append(create(size, size, choose_last))
         mazes3.append(create(size, size, choose_random))
 
-    maze1 = create(size, size, choose_first)
-    maze2 = create(size, size, choose_last)
-    maze3 = create(size, size, choose_random)
+    test_mazes = []
 
-    for i in range(amount):
-        distance = np.sqrt(np.sum(np.square(maze1 - mazes1[i])))
-        print(distance)
+    test_mazes.append(create(size, size, choose_first))
+    test_mazes.append(create(size, size, choose_last))
+    test_mazes.append(create(size, size, choose_random))
 
-    print()
+    for test_maze in test_mazes:
+        for i in range(amount):
+            distance = np.sqrt(np.sum(np.square(test_maze - mazes1[i])))
+            print(distance)
 
-    for i in range(amount):
-        distance = np.sqrt(np.sum(np.square(maze2 - mazes2[i])))
-        print(distance)
+        print()
 
-    print()
+        for i in range(amount):
+            distance = np.sqrt(np.sum(np.square(test_maze - mazes2[i])))
+            print(distance)
 
-    for i in range(amount):
-        distance = np.sqrt(np.sum(np.square(maze3 - mazes3[i])))
-        print(distance)
+        print()
 
+        for i in range(amount):
+            distance = np.sqrt(np.sum(np.square(test_maze - mazes3[i])))
+            print(distance)
 
-    plt.imshow(maze1, cmap='gray', interpolation=None)
-    plt.figure()
-    plt.imshow(maze2, cmap='gray', interpolation=None)
-    plt.figure()
-    plt.imshow(maze3, cmap='gray', interpolation=None)
+        print()
+
+        plt.imshow(test_maze, cmap='gray', interpolation=None)
+        plt.figure()
+
     plt.show()
+
+    # plt.imshow(maze1, cmap='gray', interpolation=None)
+    # plt.figure()
+    # plt.imshow(maze2, cmap='gray', interpolation=None)
+    # plt.figure()
+    # plt.imshow(maze3, cmap='gray', interpolation=None)
+    # plt.show()
 

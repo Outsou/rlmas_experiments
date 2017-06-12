@@ -10,6 +10,7 @@ import heapq
 import math
 import time
 import random
+import numpy as np
 
 pq = []                         # list of entries arranged in a heap
 entry_finder = {}               # mapping of tasks to entries
@@ -162,6 +163,21 @@ def get_path(node):
     path.reverse()
     return path
 
+def path_to_string(path):
+    s = ''
+
+    for i in range(len(path)-1):
+        movement = np.subtract(path[i], path[i+1])
+        if movement[0] < 0:
+            s += 'S'
+        elif movement[0] > 0:
+            s += 'N'
+        elif movement[1] < 0:
+            s += 'E'
+        else:
+            s += 'W'
+
+    return s
 
 if __name__ == "__main__":
     import growing_tree as gt
