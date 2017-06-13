@@ -2,25 +2,28 @@ from creamas.vote import VoteAgent
 import mazes.growing_tree as gt
 from artifacts.maze_artifact import MazeArtifact
 import mazes.maze_solver as ms
-from utilities.math import levenshtein
 from rl.bandit_learner import BanditLearner
 
 import logging
 import aiomas
+import editdistance
 
 
 class MazeAgent(VoteAgent):
-    def __init__(self, environment, maze_shape = (40, 40), rand=False, critic_threshold = 10, veto_threshold = 10, log_folder=None, log_level=logging.INFO, memsize=100):
+    def __init__(self, environment, choose_func, maze_shape = (40, 40), invent_n=10, rand=False, critic_threshold = 10, veto_threshold = 10, log_folder=None, log_level=logging.INFO, memsize=100):
         super().__init__(environment, log_folder=log_folder,
                          log_level=log_level)
 
-        self.stmem = STMemory(length=memsize)
+        self.stmem = STMemory(length=memsize, max_length=memsize)
         self.maze_shape = maze_shape
         self.age = 0
         self._own_threshold = critic_threshold
         self._novelty_threshold = veto_threshold
-        self.bandit_learner = BanditLearner(len(self.connections))
+        self.invent_n = invent_n
+        self.bandit_learner = None
         self.rand = False
+        self.connection_counts = None
+        self.choose_func = choose_func
 
     def create(self, size_x, size_y, choose_cell):
         maze = gt.create(size_x, size_y, choose_cell)
@@ -36,20 +39,24 @@ class MazeAgent(VoteAgent):
                 'solution': solution}
 
     def novelty(self, maze):
-        return self.stmem.distance(maze)
+        distance = self.stmem.distance(maze)
+        return distance
 
     def evaluate(self, artifact):
-        return self.novelty(artifact.obj)
+        if self.name in artifact.evals:
+            return artifact.evals[self.name], None
+
+        return self.novelty(artifact.obj), None
 
     def invent(self, n):
-        maze = self.create(self.maze_shape[0], self.maze_shape[1], gt.choose_first)
+        maze = self.create(self.maze_shape[0], self.maze_shape[1], self.choose_func)
         best_artifact = MazeArtifact(self, maze, domain='maze')
-        ev = self.evaluate(best_artifact)
+        ev, _ = self.evaluate(best_artifact)
         best_artifact.add_eval(self, ev)
         for i in range(n-1):
-            maze = self.create(self.maze_shape[0], self.maze_shape[1], gt.choose_first)
+            maze = self.create(self.maze_shape[0], self.maze_shape[1], self.choose_func)
             artifact = MazeArtifact(self, maze, domain='maze')
-            ev = self.evaluate(artifact)
+            ev, _ = self.evaluate(artifact)
             artifact.add_eval(self, ev)
             if ev > best_artifact.evals[self.name]:
                 best_artifact = artifact
@@ -68,8 +75,20 @@ class MazeAgent(VoteAgent):
             self.stmem.train_cycle(artifact.obj)
 
     @aiomas.expose
-    def get_criticism(self, artifact):
-        evaluation = self.evaluate(artifact)
+    def add_connections(self, conns):
+        rets = super().add_connections(conns)
+        length = len(self.connections)
+        self.bandit_learner = BanditLearner(length)
+
+        self.connection_counts = {}
+        for conn in conns:
+            self.connection_counts[conn[0]] = 0
+
+        return rets
+
+    @aiomas.expose
+    async def get_criticism(self, artifact):
+        evaluation, _ = self.evaluate(artifact)
 
         if evaluation >= self._novelty_threshold:
             artifact.add_eval(self, evaluation)
@@ -79,11 +98,20 @@ class MazeAgent(VoteAgent):
             return False, artifact
 
     @aiomas.expose
+    def get_connection_counts(self):
+        return self.connection_counts
+
+    @aiomas.expose
+    def get_name(self):
+        return self.name
+
+    @aiomas.expose
     async def act(self):
         self.age += 1
         self.bandit_learner.increment_iteration_count()
 
-        artifact = self.invent(1)
+        artifact = self.invent(self.invent_n)
+
         val = artifact.evals[self.name]
         self.add_artifact(artifact)
 
@@ -93,11 +121,10 @@ class MazeAgent(VoteAgent):
 
             bandit = self.bandit_learner.choose_bandit(rand=self.rand)
             critic = self.connections[bandit]
+            self.connection_counts[critic] += 1
 
             connection = await self.env.connect(critic)
             passed, artifact = await connection.get_criticism(artifact)
-
-            self.env.add_candidate(artifact)
 
             if passed:
                 self.bandit_learner.give_reward(bandit, -1)
@@ -139,10 +166,10 @@ class STMemory():
 
         limit = self.get_comparison_amount()
 
-        mdist = levenshtein(artifact['solution'], self.artifacts[0]['solution'])
+        mdist = editdistance.eval(artifact['solution'], self.artifacts[0]['solution'])
 
         for i in range(1, limit):
-            dist = levenshtein(artifact['solution'], self.artifacts[i]['solution'])
+            dist = editdistance.eval(artifact['solution'], self.artifacts[i]['solution'])
             if dist < mdist:
                 mdist = dist
         return mdist

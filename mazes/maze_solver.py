@@ -211,6 +211,22 @@ if __name__ == "__main__":
         maze = draw_path(maze, path)
         plt.imshow(maze, cmap='gray', interpolation=None)
         plt.show()
+
+        # import numpy as np
+        # import matplotlib
+        # import matplotlib.pyplot as plt
+        #
+        # value = 0.7
+        # data = maze
+        #
+        # masked_array = np.ma.masked_where(data == value, data)
+        #
+        # cmap = matplotlib.cm.gray  # Can be any colormap that you want after the cm
+        # cmap.set_bad(color='red')
+        #
+        # plt.imshow(masked_array, cmap=cmap)
+        # plt.show()
+
     td = time.time() - t
     print("Overall {} mazes generated and solved in: {} ({} / maze)"
           .format(N_MAZES, td, td / N_MAZES))

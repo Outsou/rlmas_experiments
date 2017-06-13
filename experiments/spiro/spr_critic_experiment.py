@@ -1,20 +1,20 @@
-from environments.spr_environment import SprEnvironment
-from creamas.core.simulation import Simulation
-from creamas.examples.spiro.spiro_agent_mp import SpiroMultiEnvManager
-from creamas.examples.spiro.spiro_agent_mp import SpiroEnvManager
-from creamas.core.environment import Environment
-import logging
 import asyncio
+import logging
+import operator
+import os
+import pickle
+
 import aiomas
-from utilities.serializers import get_spiro_ser_own
+import numpy as np
+from creamas.core.environment import Environment
+from creamas.core.simulation import Simulation
+from creamas.examples.spiro.spiro_agent_mp import SpiroEnvManager
+from creamas.examples.spiro.spiro_agent_mp import SpiroMultiEnvManager
+
+from environments.spiro.spr_environment import SprEnvironment
 from utilities.math import gini
 from utilities.result_analyzer import analyze
-
-import operator
-import numpy as np
-import pickle
-import os
-
+from utilities.serializers import get_spiro_ser_own
 
 if __name__ == "__main__":
 

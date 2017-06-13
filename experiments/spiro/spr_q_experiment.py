@@ -1,21 +1,21 @@
-from environments.spr_environment_equal import SprEnvironmentEqual
-from creamas.core.simulation import Simulation
-from creamas.examples.spiro.spiro_agent_mp import SpiroMultiEnvManager
-from creamas.examples.spiro.spiro_agent_mp import SpiroEnvManager
-from creamas.core.environment import Environment
-from creamas.logging import ObjectLogger
-from creamas.util import run
-import logging
 import asyncio
+import operator
+import os
+import pickle
+
 import aiomas
-from utilities.serializers import get_spiro_ser_own
+import numpy as np
+from creamas.core.environment import Environment
+from creamas.core.simulation import Simulation
+from creamas.examples.spiro.spiro_agent_mp import SpiroEnvManager
+from creamas.examples.spiro.spiro_agent_mp import SpiroMultiEnvManager
+from creamas.util import run
+
+from environments.spiro.spr_environment_equal import SprEnvironmentEqual
 from utilities.math import gini
 from utilities.result_analyzer import analyze
+from utilities.serializers import get_spiro_ser_own
 
-import operator
-import numpy as np
-import pickle
-import os
 
 def print_and_save_stuff():
     text = ''

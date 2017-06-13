@@ -1,13 +1,14 @@
-from environments.spr_environment import SprEnvironment
-from creamas.core.simulation import Simulation
-from creamas.mp import MultiEnvManager
-from creamas.mp import EnvManager
-from creamas.core.environment import Environment
-import logging
 import asyncio
-import aiomas
-from utilities.serializers import get_spiro_ser
+import logging
 
+import aiomas
+from creamas.core.environment import Environment
+from creamas.core.simulation import Simulation
+from creamas.mp import EnvManager
+from creamas.mp import MultiEnvManager
+
+from environments.spiro.spr_environment import SprEnvironment
+from utilities.serializers import get_spiro_ser
 
 if __name__ == "__main__":
     log_folder = 'logs'

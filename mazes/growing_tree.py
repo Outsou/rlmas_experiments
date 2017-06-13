@@ -18,6 +18,7 @@ _opp = {'N': 'S', 'E': 'W', 'S': 'N', 'W': 'E'}
 
 _first_probability = 0.9
 
+
 def _create_maze_template(width, height):
     '''Create a maze template with **(width, height)** rooms.
     '''
@@ -109,10 +110,13 @@ def create(x, y, choose_cell):
     '''
     maze = _create_maze_template(x, y)
     C = [room2xy(random_room(maze))]
+
     while len(C) > 0:
         xy = choose_cell(C)
         nbs = get_neighbors(xy, maze.shape[0], maze.shape[1])
         found = False
+
+
         for card, nb in nbs:
             if is_visited(maze, nb):
                 pass
@@ -124,23 +128,30 @@ def create(x, y, choose_cell):
                 maze[nb] = 1.0
                 C.append(nb)
                 break
+
         if not found:
             C.remove(xy)
+
     return maze
 
 
 if __name__ == "__main__":
+    import mazes.maze_solver as ms
     x = 40
     y = 40
     import time
     t = time.time()
-    N_MAZES = 1
+    N_MAZES = 100
     for _ in range(N_MAZES):
-        maze = create(x, y, choose_with_probability)
+        maze = create(x, y, choose_first)
+        # start = room2xy(random_room(maze))
+        # goal = room2xy(random_room(maze))
+        # ms.solver(maze, start, goal)
     td = time.time() - t
     print("Total: {} ({} / maze)".format(td, td / N_MAZES))
-    from matplotlib import pyplot as plt
-    plt.imshow(maze, cmap='gray', interpolation=None)
-    plt.show()
+
+    # from matplotlib import pyplot as plt
+    # plt.imshow(maze, cmap='gray', interpolation=None)
+    # plt.show()
 
 

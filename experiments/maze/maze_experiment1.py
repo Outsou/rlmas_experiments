@@ -1,24 +1,73 @@
 from creamas.core import Simulation, Environment
-from creamas.mp import MultiEnvironment, MultiEnvManager, EnvManager
+from creamas.mp import MultiEnvManager, EnvManager
 from creamas.util import run
-from utilities.serializers import get_maze_ser
+from utilities.serializers import get_maze_ser, get_func_ser
 from creamas.nx import connections_from_graph
+from environments.maze.environments import MazeMultiEnvironment
+from creamas.logging import ObjectLogger
+from mazes.growing_tree import choose_first, choose_random, choose_last
 
 import asyncio
 import aiomas
 import networkx as nx
+import operator
+import os
+import shutil
+import logging
+
+def print_stuff():
+    text = ''
+    chosen_by_agent_counts = {}
+    chosen_counts = {}
+
+    for agent in agents:
+        chosen_by_agent_counts[agent] = 0
+        chosen_counts[agent] = 0
+
+    # Print who chose who and how many times
+    for connection, counts in sorted(connection_counts.items()):
+        most_chosen = max(counts.items(), key=operator.itemgetter(1))
+        chosen_by_agent_counts[most_chosen[0]] += 1
+
+        for agent, count in counts.items():
+            chosen_counts[agent] += count
+
+        text += 'Agent {} chose {} ({} times)\n'.format(connection, most_chosen[0], most_chosen[1])
+        text += str(counts)  + '\n'
+
+    text += '\n'
+
+    # Print how many times agent was chosen
+    for agent, count in sorted(chosen_by_agent_counts.items()):
+        text += '{} was chosen by {} agents, {} times\n'.format(agent, count, chosen_counts[agent])
+
+    text += '\n'
+
+    print(text)
 
 
 if __name__ == "__main__":
     # PARAMS
 
-    num_of_agents = 5
+    num_of_critic_agents = 1
+    num_of_normal_agents = 4
 
-    num_of_steps = 10
+    critic_memsize = 1000
+    normal_memsize = 1000
+    critic_threshold = 30
+    veto_threshold = 30
+    cell_choosing_func = choose_last
+
+    num_of_steps = 500
 
     # OTHER STUFF
 
     log_folder = 'experiment1_logs'
+    domain_save_folder = 'experiment1_mazes'
+
+    if os.path.exists(domain_save_folder):
+        shutil.rmtree(domain_save_folder)
+    os.makedirs(domain_save_folder)
 
     addr = ('localhost', 5550)
     addrs = [('localhost', 5560),
@@ -27,17 +76,18 @@ if __name__ == "__main__":
              ('localhost', 5563)
              ]
 
-    log_folder = None
-    env_kwargs = {'extra_serializers': [get_maze_ser], 'codec': aiomas.MsgPack}
+    env_kwargs = {'extra_serializers': [get_maze_ser, get_func_ser], 'codec': aiomas.MsgPack}
 
-    menv = MultiEnvironment(addr,
+    logger = None
+
+    menv = MazeMultiEnvironment(addr,
                             env_cls=Environment,
                             mgr_cls=MultiEnvManager,
-                            logger=None,
+                            logger=logger,
                             **env_kwargs)
 
     loop = asyncio.get_event_loop()
-    slave_kwargs = [{'extra_serializers': [get_maze_ser], 'codec': aiomas.MsgPack} for _ in range(len(addrs))]
+    slave_kwargs = [{'extra_serializers': [get_maze_ser, get_func_ser], 'codec': aiomas.MsgPack} for _ in range(len(addrs))]
 
     ret = run(menv.spawn_slaves(slave_addrs=addrs,
                                 slave_env_cls=Environment,
@@ -48,15 +98,39 @@ if __name__ == "__main__":
     ret = run(menv.set_host_managers())
     ret = run(menv.is_ready())
 
-    print(ret)
-    for _ in range(num_of_agents):
+    print('Critics:')
+    for _ in range(num_of_critic_agents):
         ret = aiomas.run(until=menv.spawn('agents.maze.maze_agent:MazeAgent',
-                                          log_folder=log_folder))
+                                          log_folder=log_folder,
+                                          memsize=critic_memsize,
+                                          critic_threshold=critic_threshold,
+                                          veto_threshold=veto_threshold,
+                                          log_level=logging.DEBUG,
+                                          choose_func=cell_choosing_func))
         print(ret)
 
-    G = nx.complete_graph(num_of_agents)
-    connections_from_graph(menv, G)
+    print('Normies:')
+    for _ in range(num_of_normal_agents):
+        ret = aiomas.run(until=menv.spawn('agents.maze.maze_agent:MazeAgent',
+                                          log_folder=log_folder,
+                                          memsize=normal_memsize,
+                                          critic_threshold=critic_threshold,
+                                          veto_threshold=veto_threshold,
+                                          log_level=logging.DEBUG,
+                                          choose_func=cell_choosing_func))
+        print(ret)
 
-    sim = Simulation(menv, log_folder=log_folder)
+    G = nx.complete_graph(num_of_normal_agents + num_of_critic_agents)
+    connections_from_graph(menv, G)
+    agents = menv.get_agents(addr=True)
+
+    sim = Simulation(menv, log_folder=log_folder, callback=menv.vote_and_save_info)
     sim.async_steps(num_of_steps)
+
+    connection_counts = menv.get_connection_counts()
+
+    menv.save_domain_artifacts(domain_save_folder)
+
     sim.end()
+
+    print_stuff()
