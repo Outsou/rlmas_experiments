@@ -11,6 +11,8 @@ import math
 import time
 import random
 import numpy as np
+import matplotlib
+import matplotlib.patches as patches
 
 pq = []                         # list of entries arranged in a heap
 entry_finder = {}               # mapping of tasks to entries
@@ -154,6 +156,39 @@ def draw_path(maze, path, color=0.7):
     maze[path[-1]] = color
     return maze
 
+def calculate_decisions(maze, path):
+    decisions = 0
+    came_from = None
+    for i, xy in enumerate(path[:-1]):
+        x = xy[0]
+        y = xy[1]
+        coords = (x-1, y)
+        if maze[coords] > 0 and coords != came_from:
+            decisions += 1
+        coords = (x+1, y)
+        if maze[coords] > 0 and coords != came_from:
+            decisions += 1
+        coords = (x, y-1)
+        if maze[coords] > 0 and coords != came_from:
+            decisions += 1
+        coords = (x, y+1)
+        if maze[coords] > 0 and coords != came_from:
+            decisions += 1
+        decisions -= 1
+
+        wx = int((xy[0] + path[i + 1][0]) / 2)
+        wy = int((xy[1] + path[i + 1][1]) / 2)
+        came_from = (wx, wy)
+    return decisions
+
+def calculate_turns_in_path(maze, path_string):
+    turns = 0
+    prev_char = path_string[0]
+    for char in path_string[1:]:
+        if char != prev_char:
+            turns += 1
+        prev_char = char
+    return turns
 
 def get_path(node):
     path = []
@@ -189,43 +224,71 @@ if __name__ == "__main__":
     solved_sum = 0.0
     created_sum = 0.0
     for i in range(N_MAZES):
-        #print("Maze {}".format(i+1))
-        t2 = time.time()
-        maze = gt.create(40, 40, gt.choose_last)
-        start = gt.room2xy(gt.random_room(maze))
-        goal = gt.room2xy(gt.random_room(maze))
-        #start = (1,1)
-        #goal = (79, 79)
-        t3 = time.time()
-        t_created = t3 - t2
-        node, expanded, added = solver(maze, start, goal)
-        t_solved = time.time() - t3
-        t_total = time.time() - t2
-        created_sum += t_created
-        solved_sum += t_solved
-        print("Maze {:0>4} created in {:.4f}, solved {}=>{} in {:.4f}. Total {:.4f}"
-              .format(i+1, t_created, start, goal, t_solved, t_total))
-        path = get_path(node)
-        print("Path length {}, nodes expanded {}, nodes added {}."
-              .format(len(path), expanded, added))
-        maze = draw_path(maze, path)
-        plt.imshow(maze, cmap='gray', interpolation=None)
-        plt.show()
+        # #print("Maze {}".format(i+1))
+        # t2 = time.time()
+        # maze = gt.create(40, 40, gt.choose_last)
+        # start = gt.room2xy(gt.random_room(maze))
+        # goal = gt.room2xy(gt.random_room(maze))
+        # #start = (1,1)
+        # #goal = (79, 79)
+        # t3 = time.time()
+        # t_created = t3 - t2
+        # node, expanded, added = solver(maze, start, goal)
+        # t_solved = time.time() - t3
+        # t_total = time.time() - t2
+        # created_sum += t_created
+        # solved_sum += t_solved
+        # print("Maze {:0>4} created in {:.4f}, solved {}=>{} in {:.4f}. Total {:.4f}"
+        #       .format(i+1, t_created, start, goal, t_solved, t_total))
+        # path = get_path(node)
+        # print("Path length {}, nodes expanded {}, nodes added {}."
+        #       .format(len(path), expanded, added))
+        # print("Number of decisions: {}"
+        #       .format(calculate_decisions(maze, path)))
+        #
+        # path_string = path_to_string(path)
+        # print("Number of turns: {}"
+        #       .format(calculate_turns_in_path(maze, path_string)))
 
-        # import numpy as np
-        # import matplotlib
-        # import matplotlib.pyplot as plt
+
+
+        import pickle
+        import zlib
+        import sys
+
+        gt._first_probability = 0.9
+        for cell_chooser in [gt.choose_first, gt.choose_with_probability, gt.choose_last]:
+            maze = gt.create(40, 40, cell_chooser)
+            compressed = zlib.compress(pickle.dumps(maze))
+            print('Compressed size: {}'.format(compressed.__sizeof__()))
+            plt.imshow(maze, cmap='gray', interpolation=None)
+            plt.show()
+
+        for prob in reversed([0.1, 0.3, 0.5, 0.7, 0.9]):
+            gt._first_probability = prob
+            maze = gt.create(40, 40, gt.choose_with_probability)
+            compressed = zlib.compress(pickle.dumps(maze))
+            print('Compressed size (prob {}): {}'.format(prob, compressed.__sizeof__()))
+            plt.imshow(maze, cmap='gray', interpolation=None)
+            plt.show()
+
+        # maze = draw_path(maze, path)
         #
         # value = 0.7
-        # data = maze
         #
-        # masked_array = np.ma.masked_where(data == value, data)
+        # masked_array = np.ma.masked_where(maze == value, maze)
         #
-        # cmap = matplotlib.cm.gray  # Can be any colormap that you want after the cm
-        # cmap.set_bad(color='red')
+        # cmap = matplotlib.cm.gray
+        # cmap.set_bad(color='blue')
         #
-        # plt.imshow(masked_array, cmap=cmap)
+        # fig, ax = plt.subplots(1)
+        # ax.imshow(masked_array, cmap=cmap, interpolation=None)
+        # start_circle = patches.Circle((start[1], start[0]), 2, linewidth=2, edgecolor='y', facecolor='none')
+        # ax.add_patch(start_circle)
+        # goal_circle = patches.Circle((goal[1], goal[0]), 2, linewidth=2, edgecolor='r', facecolor='none')
+        # ax.add_patch(goal_circle)
         # plt.show()
+
 
     td = time.time() - t
     print("Overall {} mazes generated and solved in: {} ({} / maze)"

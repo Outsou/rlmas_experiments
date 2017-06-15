@@ -6,10 +6,13 @@ import pickle
 
 import aiomas
 import numpy as np
+import time
+
 from creamas.core.environment import Environment
 from creamas.core.simulation import Simulation
 from creamas.examples.spiro.spiro_agent_mp import SpiroEnvManager
 from creamas.examples.spiro.spiro_agent_mp import SpiroMultiEnvManager
+from creamas.util import run
 
 from environments.spiro.spr_environment import SprEnvironment
 from utilities.math import gini
@@ -18,26 +21,26 @@ from utilities.serializers import get_spiro_ser_own
 
 if __name__ == "__main__":
 
-    # ALL PARAMETERS
+    # PARAMETERS
 
-    critic_threshold = 0.08
-    veto_threshold = 0.08
+    critic_threshold = 0.10
+    veto_threshold = 0.10
     ask_passing = True
     random_choosing = False
 
-    normal_mem = 10
-    critic_mem = 60
-    normal_invent_n = 12
-    critic_invent_n = 2
+    normal_mem = 16
+    critic_mem = 144
+    search_width_normal = 16
+    search_width_critic = 16
 
-    num_of_normal_agents = 4
-    num_of_critics = 1
+    num_of_normal_agents = 14
+    num_of_critics = 2
 
-    critic_type = 'spiro.critic_test_agent:CriticTestAgent'
-    #critic_type = 'spiro.critic_only_agent:CriticOnlyAgent'
+    critic_type = 'agents.spiro.critic_test_agent:CriticTestAgent'
+    #critic_type = 'agents.spiro.critic_only_agent:CriticOnlyAgent'
 
-    num_of_artifacts = 400
-    num_of_simulations = 5
+    num_of_artifacts = 200
+    num_of_simulations = 10
     num_of_steps = 10
 
     use_steps = False # Stop when enough steps or when enough artifacts
@@ -53,67 +56,80 @@ if __name__ == "__main__":
              ('localhost', 5563)
              ]
 
-    stats = {'comps': [], 'novelty': [], 'gini': [], 'bestie_find_speed': []}
+    stats = {'comps': [], 'novelty': [], 'gini': [], 'bestie_find_speed': [], 'time': [], 'steps': []}
+
+    env_kwargs = {'extra_serializers': [get_spiro_ser_own], 'codec': aiomas.MsgPack}
+    slave_kwargs = [{'extra_serializers': [get_spiro_ser_own], 'codec': aiomas.MsgPack} for _ in range(len(addrs))]
+    logger = None
 
     # Run simulation x times and record stats
     for _ in range(num_of_simulations):
 
-        env = SprEnvironment(addr, env_cls=Environment,
-                             mgr_cls=SpiroMultiEnvManager,
-                             slave_env_cls=Environment,
-                             slave_mgr_cls=SpiroEnvManager,
-                             slave_addrs=addrs, log_folder=log_folder,
-                             log_level=logging.INFO,
-                             extra_ser=[get_spiro_ser_own])
+        menv = SprEnvironment(addr,
+                              env_cls=Environment,
+                              mgr_cls=SpiroMultiEnvManager,
+                              logger=logger,
+                              **env_kwargs)
 
         loop = asyncio.get_event_loop()
-        ret = loop.run_until_complete(env.set_host_managers())
-        ret = loop.run_until_complete(env.wait_slaves(30, check_ready=True))
-        ret = loop.run_until_complete(env.is_ready())
+
+        ret = run(menv.spawn_slaves(slave_addrs=addrs,
+                                    slave_env_cls=Environment,
+                                    slave_mgr_cls=SpiroEnvManager,
+                                    slave_kwargs=slave_kwargs))
+
+        ret = run(menv.wait_slaves(30))
+        ret = run(menv.set_host_managers())
+        ret = run(menv.is_ready())
 
         for _ in range(num_of_normal_agents):
-            print(aiomas.run(until=env.spawn('spiro.critic_test_agent:CriticTestAgent',
-                                             desired_novelty=-1,
-                                             log_folder=log_folder,
-                                             memsize=normal_mem,
-                                             critic_threshold=critic_threshold,
-                                             veto_threshold=veto_threshold,
-                                             ask_passing=ask_passing,
-                                             rand=random_choosing,
-                                             invent_n=normal_invent_n)))
+            print(aiomas.run(until=menv.spawn('agents.spiro.critic_test_agent:CriticTestAgent',
+                                              desired_novelty=-1,
+                                              log_folder=log_folder,
+                                              memsize=normal_mem,
+                                              critic_threshold=critic_threshold,
+                                              veto_threshold=veto_threshold,
+                                              ask_passing=ask_passing,
+                                              rand=random_choosing,
+                                              search_width=search_width_normal)))
 
         for _ in range(num_of_critics):
-            print(aiomas.run(until=env.spawn(critic_type,
-                                             desired_novelty=-1,
-                                             log_folder=log_folder,
-                                             memsize=critic_mem,
-                                             critic_threshold=critic_threshold,
-                                             veto_threshold=veto_threshold,
-                                             ask_passing=ask_passing,
-                                             rand=random_choosing,
-                                             invent_n=critic_invent_n)))
+            print(aiomas.run(until=menv.spawn(critic_type,
+                                              desired_novelty=-1,
+                                              log_folder=log_folder,
+                                              memsize=critic_mem,
+                                              critic_threshold=critic_threshold,
+                                              veto_threshold=veto_threshold,
+                                              ask_passing=ask_passing,
+                                              rand=random_choosing,
+                                              search_width=search_width_critic)))
 
-        env.set_agent_acquaintances()
+        menv.set_agent_acquaintances()
 
-        sim = Simulation(env=env, log_folder=log_folder, callback=env.vote_and_save_info)
+        sim = Simulation(env=menv, log_folder=log_folder, callback=menv.vote_and_save_info)
+
+        start_time = time.time()
 
         if use_steps:
             sim.async_steps(num_of_steps)
         else:
-            while len(env.artifacts) <= num_of_artifacts:
+            while len(menv.artifacts) < num_of_artifacts:
                  sim.async_step()
 
-        env._consistent = False
-        acquaintance_counts = env.get_acquaintance_counts()
-        acquaintance_values = env.get_acquaintance_values()
-        total_comparisons = env.get_comparison_count()
-        mean, _, _ = env._calc_distances()
-        num_of_accepted_artifacts = len(env.artifacts)
-        artifacts = env.artifacts
-        last_changes = env.get_last_best_acquaintance_changes()
-        overcame_own_threshold_counts = env.get_overcame_own_threshold_counts()
-        steps = env.age
-        criticism_stats = env.get_criticism_stats()
+        stats['time'].append(time.time()-start_time)
+        stats['steps'].append(sim.age)
+
+        menv._consistent = False
+        acquaintance_counts = menv.get_acquaintance_counts()
+        acquaintance_values = menv.get_acquaintance_values()
+        total_comparisons = menv.get_comparison_count()
+        mean, _, _ = menv._calc_distances()
+        num_of_accepted_artifacts = len(menv.artifacts)
+        artifacts = menv.artifacts
+        last_changes = menv.get_last_best_acquaintance_changes()
+        overcame_own_threshold_counts = menv.get_overcame_own_threshold_counts()
+        steps = menv.age
+        criticism_stats = menv.get_criticism_stats()
 
         sim.end()
 
@@ -200,7 +216,7 @@ if __name__ == "__main__":
     if not os.path.exists(directory):
         os.makedirs(directory)
 
-    file = "{}/stats_mem{}-{}_artifacts{}_{}.p".format(directory, normal_mem, critic_mem, num_of_artifacts, critic_type)
+    file = "{}/stats_mem{}-{}_artifacts{}_passing{}_rand{}.p".format(directory, normal_mem, critic_mem, num_of_artifacts, ask_passing, random_choosing)
     pickle.dump(stats, open(file, "wb"))
 
     analyze(file)

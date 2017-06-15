@@ -61,19 +61,20 @@ def get_neighbors(xy, w, h, randomize=True):
 def choose_first(C):
     '''Choose the first item from the list.
     '''
-    return C[0]
+    return C[0], 0
 
 
 def choose_last(C):
     '''Choose the last item from the list.
     '''
-    return C[-1]
+    return C[-1], len(C) - 1
 
 
 def choose_random(C):
     '''Choose a random item from the list.
     '''
-    return random.choice(C)
+    choice = random.randint(0, len(C)-1)
+    return C[choice], choice
 
 def choose_with_probability(C):
     rand = numpy.random.rand()
@@ -112,7 +113,7 @@ def create(x, y, choose_cell):
     C = [room2xy(random_room(maze))]
 
     while len(C) > 0:
-        xy = choose_cell(C)
+        xy, idx = choose_cell(C)
         nbs = get_neighbors(xy, maze.shape[0], maze.shape[1])
         found = False
 
@@ -130,7 +131,7 @@ def create(x, y, choose_cell):
                 break
 
         if not found:
-            C.remove(xy)
+            del C[idx]
 
     return maze
 
@@ -143,15 +144,15 @@ if __name__ == "__main__":
     t = time.time()
     N_MAZES = 100
     for _ in range(N_MAZES):
-        maze = create(x, y, choose_first)
+        maze = create(x, y, choose_with_probability)
         # start = room2xy(random_room(maze))
         # goal = room2xy(random_room(maze))
         # ms.solver(maze, start, goal)
     td = time.time() - t
     print("Total: {} ({} / maze)".format(td, td / N_MAZES))
 
-    # from matplotlib import pyplot as plt
-    # plt.imshow(maze, cmap='gray', interpolation=None)
-    # plt.show()
+    from matplotlib import pyplot as plt
+    plt.imshow(maze, cmap='gray', interpolation=None)
+    plt.show()
 
 

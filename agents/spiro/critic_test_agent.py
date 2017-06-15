@@ -9,7 +9,7 @@ import logging
 
 class CriticTestAgent(SpiroAgent):
 
-    def __init__(self, environment, invent_n, ask_passing=True, rand=False, *args, **kwargs):
+    def __init__(self, environment, ask_passing=True, rand=False, *args, **kwargs):
         super().__init__(environment, *args, **kwargs)
         self.comparison_count = 0
         self.name = "{}_M{}".format(self.name, self.stmem.length)
@@ -19,7 +19,6 @@ class CriticTestAgent(SpiroAgent):
         self.rejection_count = 0
         self.opinion_asked_count = 0
         self.rand = rand
-        self.invent_n = invent_n
 
     @aiomas.expose
     def set_acquaintances(self, addresses):
@@ -51,7 +50,7 @@ class CriticTestAgent(SpiroAgent):
     async def act(self):
         self.bandit_learner.increment_iteration_count()
 
-        artifact = self.invent(self.invent_n)
+        artifact = self.invent(self.search_width)
 
         self.added_last = False
 

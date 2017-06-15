@@ -197,14 +197,6 @@ if __name__ == "__main__":
                                   logger=logger,
                                   **env_kwargs)
 
-        # env = SprEnvironmentEqual(addr, env_cls=Environment,
-        #                      mgr_cls=SpiroMultiEnvManager,
-        #                      slave_env_cls=Environment,
-        #                      slave_mgr_cls=SpiroEnvManager,
-        #                      slave_addrs=addrs, log_folder=log_folder,
-        #                      log_level=logging.INFO,
-        #                      extra_ser=[get_spiro_ser_own])
-
         loop = asyncio.get_event_loop()
 
         ret = run(env.spawn_slaves(slave_addrs=addrs,

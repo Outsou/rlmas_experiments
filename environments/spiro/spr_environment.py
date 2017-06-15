@@ -77,19 +77,6 @@ class SprEnvironment(SpiroMultiEnvironment):
 
         return dict
 
-    def destroy(self, folder=None):
-        '''Destroy the environment and the subprocesses.
-        '''
-        #ameans = [(0, 0, 0) for _ in range(3)]
-        #ret = [self.save_info(folder, ameans)]
-        rets = aiomas.run(until=self._destroy_slaves(folder))
-        #rets = ret + rets
-        # Close and join the process pool nicely.
-        self._pool.close()
-        self._pool.terminate()
-        self._pool.join()
-        self._env.shutdown()
-        return rets
 
     def _validate_candidates(self):
         '''Validate current candidates in the environment by pruning candidates
@@ -135,3 +122,16 @@ class SprEnvironment(SpiroMultiEnvironment):
 
         self.clear_candidates()
         self.valid_candidates = []
+
+    def destroy(self, folder=None):
+        '''Destroy the environment and the subprocesses.
+        '''
+        ameans = [(0, 0, 0) for _ in range(3)]
+        #ret = [self.save_info(folder, ameans)]
+        aiomas.run(until=self.stop_slaves(folder))
+        # Close and join the process pool nicely.
+        self._pool.close()
+        self._pool.terminate()
+        self._pool.join()
+        self._env.shutdown()
+        return None

@@ -98,8 +98,10 @@ class CriticEqualAgent(CriticTestAgent):
 
     @aiomas.expose
     async def domain_artifact_added(self, spiro, iterations=1):
+        super().domain_artifact_added(spiro, iterations=iterations)
         if spiro.creator == self.name:
             self.creation_reward += 1
+
 
     def evaluate(self, artifact):
         '''Evaluate the artifact with respect to the spiro short term memory.

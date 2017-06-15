@@ -15,6 +15,7 @@ import os
 import shutil
 import logging
 
+
 def print_stuff():
     text = ''
     chosen_by_agent_counts = {}
@@ -49,14 +50,14 @@ def print_stuff():
 if __name__ == "__main__":
     # PARAMS
 
-    num_of_critic_agents = 1
-    num_of_normal_agents = 4
+    num_of_critic_agents = 2
+    num_of_normal_agents = 48
 
-    critic_memsize = 1000
-    normal_memsize = 1000
+    critic_memsize = 100
+    normal_memsize = 10
     critic_threshold = 30
     veto_threshold = 30
-    cell_choosing_func = choose_last
+    cell_choosing_func = choose_random
 
     num_of_steps = 500
 
