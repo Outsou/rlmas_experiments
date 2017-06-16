@@ -14,6 +14,8 @@ import numpy as np
 import matplotlib
 import matplotlib.patches as patches
 
+import mazes.growing_tree as gt
+
 pq = []                         # list of entries arranged in a heap
 entry_finder = {}               # mapping of tasks to entries
 REMOVED = '<removed-task>'      # placeholder for a removed task
@@ -214,8 +216,41 @@ def path_to_string(path):
 
     return s
 
+def count_turns(maze):
+    w = int((maze.shape[0] - 1) / 2)
+    h = int((maze.shape[1] - 1) / 2)
+    count = 0
+
+    for x in range(w):
+        for y in range(h):
+            # count open paths
+            open_paths = 0
+            room_xy = gt.room2xy((x, y))
+            n_open = False
+            s_open = False
+            e_open = False
+            w_open = False
+            if maze[room_xy[0] - 1, room_xy[1]] > 0:
+                n_open = True
+                open_paths += 1
+            if maze[room_xy[0] + 1, room_xy[1]] > 0:
+                s_open = True
+                open_paths += 1
+            if maze[room_xy[0], room_xy[1] - 1] > 0:
+                w_open = True
+                open_paths += 1
+            if maze[room_xy[0], room_xy[1] + 1] > 0:
+                e_open = True
+                open_paths += 1
+
+            if open_paths == 2:
+                if not ((n_open and s_open) or (e_open and w_open)):
+                    count += 1
+
+    return count
+
+
 if __name__ == "__main__":
-    import growing_tree as gt
     from matplotlib import pyplot as plt
     t = time.time()
     N_MAZES = 100
@@ -259,16 +294,15 @@ if __name__ == "__main__":
         gt._first_probability = 0.9
         for cell_chooser in [gt.choose_first, gt.choose_with_probability, gt.choose_last]:
             maze = gt.create(40, 40, cell_chooser)
-            compressed = zlib.compress(pickle.dumps(maze))
-            print('Compressed size: {}'.format(compressed.__sizeof__()))
+            print('Turns: {}'.format(count_turns(maze)))
             plt.imshow(maze, cmap='gray', interpolation=None)
             plt.show()
 
         for prob in reversed([0.1, 0.3, 0.5, 0.7, 0.9]):
             gt._first_probability = prob
             maze = gt.create(40, 40, gt.choose_with_probability)
-            compressed = zlib.compress(pickle.dumps(maze))
-            print('Compressed size (prob {}): {}'.format(prob, compressed.__sizeof__()))
+            print('Probability: {}'.format(prob))
+            print('Turns: {}'.format(count_turns(maze)))
             plt.imshow(maze, cmap='gray', interpolation=None)
             plt.show()
 

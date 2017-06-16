@@ -117,11 +117,13 @@ class CriticTestAgent(SpiroAgent):
         return self.rejection_count, self.opinion_asked_count
 
     @aiomas.expose
-    def get_acquaintance_values(self):
+    async def get_acquaintance_values(self):
         acquaintance_values = {}
 
         for i in range(len(self.acquaintances)):
-            acquaintance_values[self.acquaintances[i][0]] = self.bandit_learner.bandits[i]
+            connection = await self.env.connect(self.acquaintances[i][0])
+            name = await connection.get_name()
+            acquaintance_values[name] = self.bandit_learner.bandits[i]
 
         return acquaintance_values
 

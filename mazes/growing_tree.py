@@ -142,17 +142,18 @@ if __name__ == "__main__":
     y = 40
     import time
     t = time.time()
-    N_MAZES = 100
+    N_MAZES = 1
     for _ in range(N_MAZES):
-        maze = create(x, y, choose_with_probability)
+        maze = create(x, y, choose_first)
         # start = room2xy(random_room(maze))
         # goal = room2xy(random_room(maze))
         # ms.solver(maze, start, goal)
     td = time.time() - t
     print("Total: {} ({} / maze)".format(td, td / N_MAZES))
 
-    from matplotlib import pyplot as plt
-    plt.imshow(maze, cmap='gray', interpolation=None)
-    plt.show()
+
+    # from matplotlib import pyplot as plt
+    # plt.imshow(maze, cmap='gray', interpolation=None)
+    # plt.show()
 
 

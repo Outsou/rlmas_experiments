@@ -31,16 +31,16 @@ if __name__ == "__main__":
     normal_mem = 16
     critic_mem = 144
     search_width_normal = 16
-    search_width_critic = 16
+    search_width_critic = 2
 
-    num_of_normal_agents = 14
-    num_of_critics = 2
+    num_of_normal_agents = 90
+    num_of_critics = 10
 
     critic_type = 'agents.spiro.critic_test_agent:CriticTestAgent'
     #critic_type = 'agents.spiro.critic_only_agent:CriticOnlyAgent'
 
     num_of_artifacts = 200
-    num_of_simulations = 10
+    num_of_simulations = 1
     num_of_steps = 10
 
     use_steps = False # Stop when enough steps or when enough artifacts
@@ -145,7 +145,7 @@ if __name__ == "__main__":
 
         # Print how the spiro value other's opinions
         for acquaintance, values in acquaintance_values.items():
-            acquaintance_avgs[acquaintance[:22]] = 0
+            acquaintance_avgs[acquaintance] = 0
             print(acquaintance)
             print(values)
 
