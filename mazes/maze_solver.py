@@ -288,8 +288,6 @@ if __name__ == "__main__":
 
 
         import pickle
-        import zlib
-        import sys
 
         gt._first_probability = 0.9
         for cell_chooser in [gt.choose_first, gt.choose_with_probability, gt.choose_last]:
@@ -298,13 +296,27 @@ if __name__ == "__main__":
             plt.imshow(maze, cmap='gray', interpolation=None)
             plt.show()
 
+        turns = []
+        probs = []
+        turns.append(count_turns(gt.create(40, 40, gt.choose_first)))
+        probs.append(1.0)
+
         for prob in reversed([0.1, 0.3, 0.5, 0.7, 0.9]):
             gt._first_probability = prob
             maze = gt.create(40, 40, gt.choose_with_probability)
             print('Probability: {}'.format(prob))
-            print('Turns: {}'.format(count_turns(maze)))
+            count = count_turns(maze)
+            print('Turns: {}'.format(count))
+            turns.append(count)
+            probs.append(prob)
             plt.imshow(maze, cmap='gray', interpolation=None)
             plt.show()
+
+        turns.append(count_turns(gt.create(40, 40, gt.choose_last)))
+        probs.append(0.0)
+
+        plt.plot(probs, turns)
+        plt.show()
 
         # maze = draw_path(maze, path)
         #

@@ -50,11 +50,16 @@ def print_stuff():
 if __name__ == "__main__":
     # PARAMS
 
-    num_of_critic_agents = 2
-    num_of_normal_agents = 48
+    num_of_critic_agents = 10
+    num_of_normal_agents = 90
 
-    critic_memsize = 100
-    normal_memsize = 10
+    maze_shape = (32, 32)
+
+    critic_memsize = 144
+    normal_memsize = 16
+    critic_search_width = 2
+    normal_search_width = 16
+
     critic_threshold = 30
     veto_threshold = 30
     cell_choosing_func = choose_random
@@ -107,7 +112,9 @@ if __name__ == "__main__":
                                           critic_threshold=critic_threshold,
                                           veto_threshold=veto_threshold,
                                           log_level=logging.DEBUG,
-                                          choose_func=cell_choosing_func))
+                                          choose_func=cell_choosing_func,
+                                          maze_shape=maze_shape,
+                                          search_width=critic_search_width))
         print(ret)
 
     print('Normies:')
@@ -118,7 +125,9 @@ if __name__ == "__main__":
                                           critic_threshold=critic_threshold,
                                           veto_threshold=veto_threshold,
                                           log_level=logging.DEBUG,
-                                          choose_func=cell_choosing_func))
+                                          choose_func=cell_choosing_func,
+                                          maze_shape=maze_shape,
+                                          search_width=normal_search_width))
         print(ret)
 
     G = nx.complete_graph(num_of_normal_agents + num_of_critic_agents)

@@ -48,13 +48,23 @@ def random_room(maze):
 
 def get_neighbors(xy, w, h, randomize=True):
     nbs = []
-    for i in range(4):
-        nx = xy[0] + _nx[i]
-        ny = xy[1] + _ny[i]
-        if nx > 0 and nx < w and ny > 0 and ny < h:
-            nbs.append((_card[i], (nx, ny)))
+
+    coord = xy[1] - 2
+    if coord > 0:
+        nbs.append(('N', (xy[0], coord)))
+    coord = xy[0] + 2
+    if coord < w:
+        nbs.append(('E', (coord, xy[1])))
+    coord = xy[1] + 2
+    if coord < h:
+        nbs.append(('S', (xy[0], coord)))
+    coord = xy[0] - 2
+    if coord > 0:
+        nbs.append(('W', (coord, xy[1])))
+
     if randomize:
-        random.shuffle(nbs)
+        numpy.random.shuffle(nbs)
+
     return nbs
 
 
@@ -109,14 +119,15 @@ def create(x, y, choose_cell):
 
     :returns: Created maze
     '''
+
     maze = _create_maze_template(x, y)
     C = [room2xy(random_room(maze))]
 
     while len(C) > 0:
+
         xy, idx = choose_cell(C)
         nbs = get_neighbors(xy, maze.shape[0], maze.shape[1])
         found = False
-
 
         for card, nb in nbs:
             if is_visited(maze, nb):
@@ -133,6 +144,8 @@ def create(x, y, choose_cell):
         if not found:
             del C[idx]
 
+
+
     return maze
 
 
@@ -142,7 +155,7 @@ if __name__ == "__main__":
     y = 40
     import time
     t = time.time()
-    N_MAZES = 1
+    N_MAZES = 1000
     for _ in range(N_MAZES):
         maze = create(x, y, choose_first)
         # start = room2xy(random_room(maze))
@@ -150,7 +163,6 @@ if __name__ == "__main__":
         # ms.solver(maze, start, goal)
     td = time.time() - t
     print("Total: {} ({} / maze)".format(td, td / N_MAZES))
-
 
     # from matplotlib import pyplot as plt
     # plt.imshow(maze, cmap='gray', interpolation=None)

@@ -10,7 +10,7 @@ import editdistance
 
 
 class MazeAgent(VoteAgent):
-    def __init__(self, environment, choose_func, maze_shape = (40, 40), invent_n=10, rand=False, critic_threshold = 10, veto_threshold = 10, log_folder=None, log_level=logging.INFO, memsize=100):
+    def __init__(self, environment, choose_func, maze_shape = (40, 40), search_width=10, rand=False, critic_threshold = 10, veto_threshold = 10, log_folder=None, log_level=logging.INFO, memsize=100):
         super().__init__(environment, log_folder=log_folder,
                          log_level=log_level)
 
@@ -19,7 +19,7 @@ class MazeAgent(VoteAgent):
         self.age = 0
         self._own_threshold = critic_threshold
         self._novelty_threshold = veto_threshold
-        self.invent_n = invent_n
+        self.search_width = search_width
         self.bandit_learner = None
         self.rand = False
         self.connection_counts = None
@@ -110,7 +110,7 @@ class MazeAgent(VoteAgent):
         self.age += 1
         self.bandit_learner.increment_iteration_count()
 
-        artifact = self.invent(self.invent_n)
+        artifact = self.invent(self.search_width)
 
         val = artifact.evals[self.name]
         self.add_artifact(artifact)
