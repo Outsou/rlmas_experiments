@@ -114,7 +114,7 @@ def create(x, y, choose_cell):
     :param callable choose_cell:
         Cell choosing method. Should be callable accepting one argument, which
         is the list of current cells to choose from. The callable should
-        return one cell from the list. See, e.g. :func:`choose_last`, 
+        return one cell from the list. See, e.g. :func:`choose_last`,
         :func:`choose_first`, :func:`choose_random`.
 
     :returns: Created maze
@@ -157,7 +157,7 @@ if __name__ == "__main__":
     t = time.time()
     N_MAZES = 1000
     for _ in range(N_MAZES):
-        maze = create(x, y, choose_first)
+        maze = create(x, y, choose_last)
         # start = room2xy(random_room(maze))
         # goal = room2xy(random_room(maze))
         # ms.solver(maze, start, goal)

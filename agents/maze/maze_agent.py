@@ -7,10 +7,11 @@ from rl.bandit_learner import BanditLearner
 import logging
 import aiomas
 import editdistance
+import time
 
 
 class MazeAgent(VoteAgent):
-    def __init__(self, environment, choose_func, maze_shape = (40, 40), search_width=10, rand=False, critic_threshold = 10, veto_threshold = 10, log_folder=None, log_level=logging.INFO, memsize=100):
+    def __init__(self, environment, choose_func, ask_criticism = True, maze_shape = (40, 40), search_width=10, ask_random=False, critic_threshold = 10, veto_threshold = 10, log_folder=None, log_level=logging.INFO, memsize=100):
         super().__init__(environment, log_folder=log_folder,
                          log_level=log_level)
 
@@ -21,11 +22,15 @@ class MazeAgent(VoteAgent):
         self._novelty_threshold = veto_threshold
         self.search_width = search_width
         self.bandit_learner = None
-        self.rand = False
+        self.ask_random = ask_random
         self.connection_counts = None
         self.choose_func = choose_func
+        self.ask_criticism = ask_criticism
+        self.comparison_count = 0
+        self.artifacts_created = 0
 
     def create(self, size_x, size_y, choose_cell):
+        self.artifacts_created += 1
         maze = gt.create(size_x, size_y, choose_cell)
         start = gt.room2xy(gt.random_room(maze))
         goal = gt.room2xy(gt.random_room(maze))
@@ -33,20 +38,23 @@ class MazeAgent(VoteAgent):
         path = ms.get_path(node)
         maze = ms.draw_path(maze, path)
         solution = ms.path_to_string(path)
-        return {'maze': maze,
+        obj = {'maze': maze,
                 'start': start,
                 'goal': goal,
                 'solution': solution}
+        return obj
 
     def novelty(self, maze):
+        self.comparison_count += self.stmem.get_comparison_amount()
         distance = self.stmem.distance(maze)
         return distance
 
     def evaluate(self, artifact):
         if self.name in artifact.evals:
-            return artifact.evals[self.name], None
-
-        return self.novelty(artifact.obj), None
+            evaluation = artifact.evals[self.name]
+        else:
+            evaluation = self.novelty(artifact.obj)
+        return evaluation, None
 
     def invent(self, n):
         maze = self.create(self.maze_shape[0], self.maze_shape[1], self.choose_func)
@@ -102,6 +110,14 @@ class MazeAgent(VoteAgent):
         return self.connection_counts
 
     @aiomas.expose
+    def get_comparison_count(self):
+        return self.comparison_count
+
+    @aiomas.expose
+    def get_artifacts_created(self):
+        return self.artifacts_created
+
+    @aiomas.expose
     def get_name(self):
         return self.name
 
@@ -119,7 +135,12 @@ class MazeAgent(VoteAgent):
             artifact.self_criticism = 'pass'
             self.learn(artifact, 1)
 
-            bandit = self.bandit_learner.choose_bandit(rand=self.rand)
+            if not self.ask_criticism:
+                self.env.add_candidate(artifact)
+                self.added_last = True
+                return
+
+            bandit = self.bandit_learner.choose_bandit(rand=self.ask_random)
             critic = self.connections[bandit]
             self.connection_counts[critic] += 1
 

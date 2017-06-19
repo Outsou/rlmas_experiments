@@ -44,14 +44,18 @@ def print_stuff():
 
     text += '\n'
 
+    text += 'Comparisons: {}\n'.format(sum(comparison_counts.values()))
+    text += 'Artifacts created: {}\n'.format(sum(artifacts_created.values()))
+    text += 'Domain novelty: {}\n'.format(mean)
+
     print(text)
 
 
 if __name__ == "__main__":
     # PARAMS
 
-    num_of_critic_agents = 10
-    num_of_normal_agents = 90
+    num_of_critic_agents = 2
+    num_of_normal_agents = 14
 
     maze_shape = (32, 32)
 
@@ -60,11 +64,15 @@ if __name__ == "__main__":
     critic_search_width = 2
     normal_search_width = 16
 
+    ask_criticism = True
+    ask_random = False
+
     critic_threshold = 30
     veto_threshold = 30
     cell_choosing_func = choose_random
 
-    num_of_steps = 500
+    num_of_artifacts = 200
+    #num_of_steps = 5
 
     # OTHER STUFF
 
@@ -114,7 +122,9 @@ if __name__ == "__main__":
                                           log_level=logging.DEBUG,
                                           choose_func=cell_choosing_func,
                                           maze_shape=maze_shape,
-                                          search_width=critic_search_width))
+                                          search_width=critic_search_width,
+                                          ask_criticism=ask_criticism,
+                                          ask_random=ask_random))
         print(ret)
 
     print('Normies:')
@@ -127,7 +137,9 @@ if __name__ == "__main__":
                                           log_level=logging.DEBUG,
                                           choose_func=cell_choosing_func,
                                           maze_shape=maze_shape,
-                                          search_width=normal_search_width))
+                                          search_width=normal_search_width,
+                                          ask_criticism=ask_criticism,
+                                          ask_random=ask_random))
         print(ret)
 
     G = nx.complete_graph(num_of_normal_agents + num_of_critic_agents)
@@ -135,9 +147,15 @@ if __name__ == "__main__":
     agents = menv.get_agents(addr=True)
 
     sim = Simulation(menv, log_folder=log_folder, callback=menv.vote_and_save_info)
-    sim.async_steps(num_of_steps)
+
+    while len(menv.artifacts) < num_of_artifacts:
+        sim.async_step()
+    #sim.async_steps(num_of_steps)
 
     connection_counts = menv.get_connection_counts()
+    comparison_counts = menv.get_comparison_counts()
+    artifacts_created = menv.get_artifacts_created()
+    mean, _, _ = menv._calc_distances()
 
     menv.save_domain_artifacts(domain_save_folder)
 

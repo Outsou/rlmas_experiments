@@ -5,6 +5,8 @@ from matplotlib import pyplot as plt
 import matplotlib
 import matplotlib.patches as patches
 import numpy as np
+import logging
+import editdistance
 
 
 class MazeMultiEnvironment(MultiEnvironment):
@@ -29,6 +31,12 @@ class MazeMultiEnvironment(MultiEnvironment):
 
     def get_connection_counts(self):
         return self.get_dictionary('get_connection_counts')
+
+    def get_comparison_counts(self):
+        return self.get_dictionary('get_comparison_count')
+
+    def get_artifacts_created(self):
+        return self.get_dictionary('get_artifacts_created')
 
     def get_dictionary(self, func_name):
         agents = self.get_agents(addr=False)
@@ -61,6 +69,8 @@ class MazeMultiEnvironment(MultiEnvironment):
         self.valid_candidates = []
 
     def save_domain_artifacts(self, folder):
+        self._calc_distances()
+
         for artifact in self.artifacts:
             value = 0.7
             maze = artifact.obj['maze']
@@ -81,3 +91,29 @@ class MazeMultiEnvironment(MultiEnvironment):
 
             plt.savefig('{}/maze_{}.png'.format(folder, artifact.env_time))
             plt.close()
+
+    def _calc_distances(self):
+        accepted_x = []
+        accepted_y = []
+        rejected_x = []
+        rejected_y = []
+        sort_arts = sorted(self.artifacts, key=lambda x: x.env_time)
+
+        for i,a1 in enumerate(sort_arts[1:]):
+            solution1 = a1.obj['solution']
+            i = i+1
+            mdist = np.inf
+            for a2 in sort_arts[:i]:
+                solution2 = a2.obj['solution']
+                dist = editdistance.eval(solution1, solution2)
+                if dist < mdist:
+                    mdist = dist
+            if a1.accepted:
+                accepted_x.append(a1.env_time)
+                accepted_y.append(mdist)
+            else:
+                rejected_x.append(a1.env_time)
+                rejected_y.append(mdist)
+        mean_dist = np.mean(accepted_y)
+        self._log(logging.INFO, "Mean of (accepted) distances: {}".format(mean_dist))
+        return mean_dist, (accepted_x, accepted_y), (rejected_x, rejected_y)
