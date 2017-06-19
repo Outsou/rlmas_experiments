@@ -85,6 +85,7 @@ class MazeAgent(VoteAgent):
     @aiomas.expose
     def add_connections(self, conns):
         rets = super().add_connections(conns)
+        self._connections = list(self._connections.keys())
         length = len(self.connections)
         self.bandit_learner = BanditLearner(length)
 
@@ -136,7 +137,7 @@ class MazeAgent(VoteAgent):
             self.learn(artifact, 1)
 
             if not self.ask_criticism:
-                self.env.add_candidate(artifact)
+                self.add_candidate(artifact)
                 self.added_last = True
                 return
 
@@ -149,7 +150,7 @@ class MazeAgent(VoteAgent):
 
             if passed:
                 self.bandit_learner.give_reward(bandit, -1)
-                self.env.add_candidate(artifact)
+                self.add_candidate(artifact)
                 self.added_last = True
             else:
                 self.bandit_learner.give_reward(bandit, 1)

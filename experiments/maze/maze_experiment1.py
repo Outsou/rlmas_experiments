@@ -4,6 +4,7 @@ from creamas.util import run
 from utilities.serializers import get_maze_ser, get_func_ser
 from creamas.nx import connections_from_graph
 from environments.maze.environments import MazeMultiEnvironment
+from creamas.vote import VoteEnvironment
 from creamas.logging import ObjectLogger
 from mazes.growing_tree import choose_first, choose_random, choose_last
 
@@ -95,17 +96,17 @@ if __name__ == "__main__":
     logger = None
 
     menv = MazeMultiEnvironment(addr,
-                            env_cls=Environment,
-                            mgr_cls=MultiEnvManager,
-                            logger=logger,
-                            **env_kwargs)
+                                env_cls=Environment,
+                                mgr_cls=MultiEnvManager,
+                                logger=logger,
+                                **env_kwargs)
 
     loop = asyncio.get_event_loop()
     slave_kwargs = [{'extra_serializers': [get_maze_ser, get_func_ser], 'codec': aiomas.MsgPack} for _ in range(len(addrs))]
-
+    from creamas.vote import VoteManager
     ret = run(menv.spawn_slaves(slave_addrs=addrs,
-                                slave_env_cls=Environment,
-                                slave_mgr_cls=EnvManager,
+                                slave_env_cls=VoteEnvironment,
+                                slave_mgr_cls=VoteManager,
                                 slave_kwargs=slave_kwargs))
 
     ret = run(menv.wait_slaves(30))

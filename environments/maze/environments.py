@@ -1,4 +1,5 @@
 from creamas.mp import MultiEnvironment
+from creamas.vote import VoteOrganizer, vote_mean
 
 import aiomas
 from matplotlib import pyplot as plt
@@ -7,6 +8,7 @@ import matplotlib.patches as patches
 import numpy as np
 import logging
 import editdistance
+import asyncio
 
 
 class MazeMultiEnvironment(MultiEnvironment):
@@ -14,20 +16,13 @@ class MazeMultiEnvironment(MultiEnvironment):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.age = 0
-        self.voting_method = 'mean'
+        self.voting_method = vote_mean
         self.valid_cand = []
         self.suggested_cand = []
-
-    async def get_candidates(self, addr):
-        candidates =  await self._manager.get_candidates(addr)
-        return candidates
-
-    async def gather_candidates(self):
-        cands = []
-        for addr in self._manager_addrs:
-            cand = await self.get_candidates(addr)
-            cands.extend(cand)
-        return cands
+        logger = logging.getLogger('creamas.spiro.vo')
+        logger.addHandler(logging.StreamHandler())
+        logger.setLevel(logging.DEBUG)
+        self.vote_organizer = VoteOrganizer(self, logger=logger)
 
     def get_connection_counts(self):
         return self.get_dictionary('get_connection_counts')
@@ -50,22 +45,26 @@ class MazeMultiEnvironment(MultiEnvironment):
 
         return dict
 
-
     def vote_and_save_info(self, age):
         self.age = age
-        self._candidates = aiomas.run(until=self.gather_candidates())
-        self.suggested_cand.append(len(self.candidates))
-        self.validate_candidates()
-        self.valid_cand.append(len(self.candidates))
-        artifacts = self.perform_voting(method=self.voting_method)
+        self.vote_organizer.gather_candidates()
+        self.suggested_cand.append(len(self.vote_organizer.candidates))
+        self.vote_organizer.validate_candidates()
+        self.valid_cand.append(len(self.vote_organizer.candidates))
+        self.vote_organizer.gather_votes()
+        artifacts = self.vote_organizer.compute_results(voting_method=self.voting_method)
         threshold = 0.0
 
-        for a, v in artifacts:
+        for a,v in artifacts:
             accepted = True if v >= threshold else False
             a.accepted = accepted
             self.add_artifact(a)
+            tasks = []
+            for addr in self._manager_addrs:
+                tasks.append(asyncio.ensure_future(self._add_domain_artifact(addr, a)))
+            aiomas.run(until=asyncio.gather(*tasks))
 
-        self.clear_candidates()
+        self.vote_organizer.clear_candidates(clear_env=True)
         self.valid_candidates = []
 
     def save_domain_artifacts(self, folder):
@@ -117,3 +116,6 @@ class MazeMultiEnvironment(MultiEnvironment):
         mean_dist = np.mean(accepted_y)
         self._log(logging.INFO, "Mean of (accepted) distances: {}".format(mean_dist))
         return mean_dist, (accepted_x, accepted_y), (rejected_x, rejected_y)
+
+    async def _add_domain_artifact(self, manager_addr, artifact):
+        pass
