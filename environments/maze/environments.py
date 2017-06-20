@@ -20,8 +20,9 @@ class MazeMultiEnvironment(MultiEnvironment):
         self.valid_cand = []
         self.suggested_cand = []
         logger = logging.getLogger('creamas.spiro.vo')
-        logger.addHandler(logging.StreamHandler())
-        logger.setLevel(logging.DEBUG)
+        if len(logger.handlers) == 0:
+            logger.addHandler(logging.StreamHandler())
+            logger.setLevel(logging.DEBUG)
         self.vote_organizer = VoteOrganizer(self, logger=logger)
 
     def get_connection_counts(self):

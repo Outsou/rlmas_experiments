@@ -1,4 +1,5 @@
 from creamas.vote import VoteAgent
+from creamas.math import gaus_pdf
 import mazes.growing_tree as gt
 from artifacts.maze_artifact import MazeArtifact
 import mazes.maze_solver as ms
@@ -28,6 +29,7 @@ class MazeAgent(VoteAgent):
         self.ask_criticism = ask_criticism
         self.comparison_count = 0
         self.artifacts_created = 0
+        self.critics = None
 
     def create(self, size_x, size_y, choose_cell):
         self.artifacts_created += 1
@@ -44,10 +46,27 @@ class MazeAgent(VoteAgent):
                 'solution': solution}
         return obj
 
-    def novelty(self, maze):
+    def complexity(self, artifact):
+        turns = ms.count_turns(artifact['maze'])
+        turns = turns / self._get_room_count(artifact) # normalize
+        return turns
+
+    def novelty(self, artifact):
         self.comparison_count += self.stmem.get_comparison_amount()
-        distance = self.stmem.distance(maze)
+        distance = self.stmem.distance(artifact)
+        distance = distance / self._get_room_count(artifact) # normalize
         return distance
+
+    @staticmethod
+    def hedonic_value(value, desired_value):
+        lmax = gaus_pdf(desired_value, desired_value, 4)
+        pdf = gaus_pdf(value, desired_value, 4)
+        return pdf / lmax
+
+    def _get_room_count(self, artifact):
+        w = int((artifact['maze'].shape[0] - 1) / 2)
+        h = int((artifact['maze'].shape[1] - 1) / 2)
+        return w*h
 
     def evaluate(self, artifact):
         if self.name in artifact.evals:
@@ -85,8 +104,8 @@ class MazeAgent(VoteAgent):
     @aiomas.expose
     def add_connections(self, conns):
         rets = super().add_connections(conns)
-        self._connections = list(self._connections.keys())
-        length = len(self.connections)
+        self.critics = list(self._connections.keys())
+        length = len(self.critics)
         self.bandit_learner = BanditLearner(length)
 
         self.connection_counts = {}
@@ -142,7 +161,7 @@ class MazeAgent(VoteAgent):
                 return
 
             bandit = self.bandit_learner.choose_bandit(rand=self.ask_random)
-            critic = self.connections[bandit]
+            critic = self.critics[bandit]
             self.connection_counts[critic] += 1
 
             connection = await self.env.connect(critic)

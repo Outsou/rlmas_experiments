@@ -2,13 +2,14 @@ from creamas.core import Simulation, Environment
 from creamas.mp import MultiEnvManager
 from creamas.util import run
 from utilities.serializers import get_maze_ser, get_func_ser
-from creamas.nx import connections_from_graph
+import creamas.nx as cnx
 from environments.maze.environments import MazeMultiEnvironment
 from creamas.vote import VoteEnvironment
 from creamas.vote import VoteManager
 from creamas.logging import ObjectLogger
 from mazes.growing_tree import choose_first, choose_random, choose_last
 from utilities.result_analyzer import analyze
+from experiment_simulation import ExperimentSimulation
 
 import asyncio
 import aiomas
@@ -19,6 +20,7 @@ import shutil
 import logging
 import time
 import pickle
+import matplotlib.pyplot as plt
 
 
 def print_stuff():
@@ -64,8 +66,8 @@ def print_stuff():
 if __name__ == "__main__":
     # PARAMS
 
-    num_of_critic_agents = 2
-    num_of_normal_agents = 14
+    num_of_critic_agents = 10
+    num_of_normal_agents = 90
 
     maze_shape = (32, 32)
 
@@ -77,12 +79,12 @@ if __name__ == "__main__":
     ask_criticism = True
     ask_random = False
 
-    critic_threshold = 30
-    veto_threshold = 30
+    critic_threshold = 0.015
+    veto_threshold = 0.015
     cell_choosing_func = choose_random
 
     num_of_artifacts = 200
-    num_of_simulations = 10
+    num_of_simulations = 5
     #num_of_steps = 5
 
     # OTHER STUFF
@@ -94,7 +96,7 @@ if __name__ == "__main__":
         shutil.rmtree(domain_save_folder)
     os.makedirs(domain_save_folder)
 
-    addr = ('localhost', 5550)
+    addr = ('localhost', 5551)
     addrs = [('localhost', 5560),
              ('localhost', 5561),
              ('localhost', 5562),
@@ -102,7 +104,7 @@ if __name__ == "__main__":
              ('localhost', 5564),
              ('localhost', 5565),
              ('localhost', 5566),
-             ('localhost', 5567)
+             ('localhost', 5567),
              ]
 
     env_kwargs = {'extra_serializers': [get_maze_ser, get_func_ser], 'codec': aiomas.MsgPack}
@@ -111,7 +113,10 @@ if __name__ == "__main__":
     logger = None
     stats = {'comps': [], 'novelty': [], 'time': [], 'steps': [], 'artifacts': []}
 
+    sim_count = 0
+
     for _ in range(num_of_simulations):
+        sim_count += 1
 
         menv = MazeMultiEnvironment(addr,
                                     env_cls=Environment,
@@ -130,6 +135,8 @@ if __name__ == "__main__":
         ret = run(menv.set_host_managers())
         ret = run(menv.is_ready())
 
+        critic_agents = []
+
         print('Critics:')
         for _ in range(num_of_critic_agents):
             ret = aiomas.run(until=menv.spawn('agents.maze.maze_agent:MazeAgent',
@@ -144,6 +151,7 @@ if __name__ == "__main__":
                                               ask_criticism=ask_criticism,
                                               ask_random=ask_random))
             print(ret)
+            critic_agents.append(run(ret[0].get_name(), loop))
 
         print('Normies:')
         for _ in range(num_of_normal_agents):
@@ -160,13 +168,28 @@ if __name__ == "__main__":
                                               ask_random=ask_random))
             print(ret)
 
-        G = nx.complete_graph(num_of_normal_agents + num_of_critic_agents)
-        connections_from_graph(menv, G)
-        agents = menv.get_agents(addr=True)
+        agents = sorted(menv.get_agents(addr=True))
+
+        # Create connection graph
+        #G = nx.complete_graph(num_of_normal_agents + num_of_critic_agents)
+        G = nx.DiGraph()
+        G.add_nodes_from(list(range(len(agents))))
+
+        # Create edges to connect all agents to critics
+        critic_idx = [idx for idx in range(len(agents)) if agents[idx] in critic_agents]
+
+        edges = []
+        for i in G.nodes():
+            for j in critic_idx:
+                if i != j:
+                    edges.append((i, j))
+
+        G.add_edges_from(edges)
+        cnx.connections_from_graph(menv, G)
+
+        sim = ExperimentSimulation(menv, sim_count, log_folder=log_folder, callback=menv.vote_and_save_info)
 
         start_time = time.time()
-
-        sim = Simulation(menv, log_folder=log_folder, callback=menv.vote_and_save_info)
 
         while len(menv.artifacts) < num_of_artifacts:
             sim.async_step()
@@ -182,7 +205,7 @@ if __name__ == "__main__":
 
         stats['novelty'].append(mean)
 
-        menv.save_domain_artifacts(domain_save_folder)
+        #menv.save_domain_artifacts(domain_save_folder)
 
         sim.end()
 

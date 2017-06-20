@@ -161,6 +161,7 @@ if __name__ == "__main__":
         # start = room2xy(random_room(maze))
         # goal = room2xy(random_room(maze))
         # ms.solver(maze, start, goal)
+        print('Non-zeros: {}'.format(numpy.count_nonzero(maze)))
     td = time.time() - t
     print("Total: {} ({} / maze)".format(td, td / N_MAZES))
 

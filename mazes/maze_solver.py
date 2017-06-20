@@ -258,6 +258,9 @@ if __name__ == "__main__":
     tmax = 0
     solved_sum = 0.0
     created_sum = 0.0
+    w = 32
+    h = 32
+
     for i in range(N_MAZES):
         # #print("Maze {}".format(i+1))
         # t2 = time.time()
@@ -291,8 +294,10 @@ if __name__ == "__main__":
 
         gt._first_probability = 0.9
         for cell_chooser in [gt.choose_first, gt.choose_with_probability, gt.choose_last]:
-            maze = gt.create(40, 40, cell_chooser)
-            print('Turns: {}'.format(count_turns(maze)))
+            maze = gt.create(w, h, cell_chooser)
+            count = count_turns(maze)
+            print('Turns: {}'.format(count))
+            print('Nomalized: {}'.format(count / (w * h)))
             plt.imshow(maze, cmap='gray', interpolation=None)
             plt.show()
 
@@ -307,6 +312,7 @@ if __name__ == "__main__":
             print('Probability: {}'.format(prob))
             count = count_turns(maze)
             print('Turns: {}'.format(count))
+            print('Nomalized: {}'.format(count / (w * h)))
             turns.append(count)
             probs.append(prob)
             plt.imshow(maze, cmap='gray', interpolation=None)
