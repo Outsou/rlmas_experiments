@@ -66,8 +66,8 @@ def print_stuff():
 if __name__ == "__main__":
     # PARAMS
 
-    num_of_critic_agents = 10
-    num_of_normal_agents = 90
+    num_of_critic_agents = 2
+    num_of_normal_agents = 8
 
     maze_shape = (32, 32)
 

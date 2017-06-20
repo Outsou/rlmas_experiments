@@ -174,6 +174,21 @@ class MazeAgent(VoteAgent):
             else:
                 self.bandit_learner.give_reward(bandit, 1)
 
+    @aiomas.expose
+    def validate(self, candidates):
+        valid_candidates = []
+
+        for candidate in candidates:
+            if self.name in candidate.evals:
+                evaluation = candidate.evals[self.name]
+            else:
+                evaluation, _ = self.evaluate(candidate)
+
+            if evaluation >= self._novelty_threshold:
+                valid_candidates.append(candidate)
+
+        return valid_candidates
+
 
 class STMemory():
 
