@@ -26,7 +26,7 @@ if __name__ == "__main__":
     loop = asyncio.get_event_loop()
     loop.run_until_complete(env.set_agent_neighbors())
 
-    agents = env.get_agents(address=False)
+    agents = env.get_agents(addr=False)
 
 
     for agent in agents:

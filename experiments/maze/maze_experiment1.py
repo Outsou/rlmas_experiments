@@ -1,12 +1,14 @@
 from creamas.core import Simulation, Environment
-from creamas.mp import MultiEnvManager, EnvManager
+from creamas.mp import MultiEnvManager
 from creamas.util import run
 from utilities.serializers import get_maze_ser, get_func_ser
 from creamas.nx import connections_from_graph
 from environments.maze.environments import MazeMultiEnvironment
 from creamas.vote import VoteEnvironment
+from creamas.vote import VoteManager
 from creamas.logging import ObjectLogger
 from mazes.growing_tree import choose_first, choose_random, choose_last
+from utilities.result_analyzer import analyze
 
 import asyncio
 import aiomas
@@ -15,6 +17,8 @@ import operator
 import os
 import shutil
 import logging
+import time
+import pickle
 
 
 def print_stuff():
@@ -45,9 +49,14 @@ def print_stuff():
 
     text += '\n'
 
-    text += 'Comparisons: {}\n'.format(sum(comparison_counts.values()))
-    text += 'Artifacts created: {}\n'.format(sum(artifacts_created.values()))
+    comps = sum(comparison_counts.values())
+    artifacts = sum(artifacts_created.values())
+    text += 'Comparisons: {}\n'.format(comps)
+    text += 'Artifacts created: {}\n'.format(artifacts)
     text += 'Domain novelty: {}\n'.format(mean)
+
+    stats['comps'].append(comps)
+    stats['artifacts'].append(artifacts)
 
     print(text)
 
@@ -73,6 +82,7 @@ if __name__ == "__main__":
     cell_choosing_func = choose_random
 
     num_of_artifacts = 200
+    num_of_simulations = 10
     #num_of_steps = 5
 
     # OTHER STUFF
@@ -88,78 +98,101 @@ if __name__ == "__main__":
     addrs = [('localhost', 5560),
              ('localhost', 5561),
              ('localhost', 5562),
-             ('localhost', 5563)
+             ('localhost', 5563),
+             ('localhost', 5564),
+             ('localhost', 5565),
+             ('localhost', 5566),
+             ('localhost', 5567)
              ]
 
     env_kwargs = {'extra_serializers': [get_maze_ser, get_func_ser], 'codec': aiomas.MsgPack}
+    slave_kwargs = [{'extra_serializers': [get_maze_ser, get_func_ser], 'codec': aiomas.MsgPack} for _ in range(len(addrs))]
 
     logger = None
+    stats = {'comps': [], 'novelty': [], 'time': [], 'steps': [], 'artifacts': []}
 
-    menv = MazeMultiEnvironment(addr,
-                                env_cls=Environment,
-                                mgr_cls=MultiEnvManager,
-                                logger=logger,
-                                **env_kwargs)
+    for _ in range(num_of_simulations):
 
-    loop = asyncio.get_event_loop()
-    slave_kwargs = [{'extra_serializers': [get_maze_ser, get_func_ser], 'codec': aiomas.MsgPack} for _ in range(len(addrs))]
-    from creamas.vote import VoteManager
-    ret = run(menv.spawn_slaves(slave_addrs=addrs,
-                                slave_env_cls=VoteEnvironment,
-                                slave_mgr_cls=VoteManager,
-                                slave_kwargs=slave_kwargs))
+        menv = MazeMultiEnvironment(addr,
+                                    env_cls=Environment,
+                                    mgr_cls=MultiEnvManager,
+                                    logger=logger,
+                                    **env_kwargs)
 
-    ret = run(menv.wait_slaves(30))
-    ret = run(menv.set_host_managers())
-    ret = run(menv.is_ready())
+        loop = asyncio.get_event_loop()
 
-    print('Critics:')
-    for _ in range(num_of_critic_agents):
-        ret = aiomas.run(until=menv.spawn('agents.maze.maze_agent:MazeAgent',
-                                          log_folder=log_folder,
-                                          memsize=critic_memsize,
-                                          critic_threshold=critic_threshold,
-                                          veto_threshold=veto_threshold,
-                                          log_level=logging.DEBUG,
-                                          choose_func=cell_choosing_func,
-                                          maze_shape=maze_shape,
-                                          search_width=critic_search_width,
-                                          ask_criticism=ask_criticism,
-                                          ask_random=ask_random))
-        print(ret)
+        ret = run(menv.spawn_slaves(slave_addrs=addrs,
+                                    slave_env_cls=VoteEnvironment,
+                                    slave_mgr_cls=VoteManager,
+                                    slave_kwargs=slave_kwargs))
 
-    print('Normies:')
-    for _ in range(num_of_normal_agents):
-        ret = aiomas.run(until=menv.spawn('agents.maze.maze_agent:MazeAgent',
-                                          log_folder=log_folder,
-                                          memsize=normal_memsize,
-                                          critic_threshold=critic_threshold,
-                                          veto_threshold=veto_threshold,
-                                          log_level=logging.DEBUG,
-                                          choose_func=cell_choosing_func,
-                                          maze_shape=maze_shape,
-                                          search_width=normal_search_width,
-                                          ask_criticism=ask_criticism,
-                                          ask_random=ask_random))
-        print(ret)
+        ret = run(menv.wait_slaves(30))
+        ret = run(menv.set_host_managers())
+        ret = run(menv.is_ready())
 
-    G = nx.complete_graph(num_of_normal_agents + num_of_critic_agents)
-    connections_from_graph(menv, G)
-    agents = menv.get_agents(addr=True)
+        print('Critics:')
+        for _ in range(num_of_critic_agents):
+            ret = aiomas.run(until=menv.spawn('agents.maze.maze_agent:MazeAgent',
+                                              log_folder=log_folder,
+                                              memsize=critic_memsize,
+                                              critic_threshold=critic_threshold,
+                                              veto_threshold=veto_threshold,
+                                              log_level=logging.DEBUG,
+                                              choose_func=cell_choosing_func,
+                                              maze_shape=maze_shape,
+                                              search_width=critic_search_width,
+                                              ask_criticism=ask_criticism,
+                                              ask_random=ask_random))
+            print(ret)
 
-    sim = Simulation(menv, log_folder=log_folder, callback=menv.vote_and_save_info)
+        print('Normies:')
+        for _ in range(num_of_normal_agents):
+            ret = aiomas.run(until=menv.spawn('agents.maze.maze_agent:MazeAgent',
+                                              log_folder=log_folder,
+                                              memsize=normal_memsize,
+                                              critic_threshold=critic_threshold,
+                                              veto_threshold=veto_threshold,
+                                              log_level=logging.DEBUG,
+                                              choose_func=cell_choosing_func,
+                                              maze_shape=maze_shape,
+                                              search_width=normal_search_width,
+                                              ask_criticism=ask_criticism,
+                                              ask_random=ask_random))
+            print(ret)
 
-    while len(menv.artifacts) < num_of_artifacts:
-        sim.async_step()
-    #sim.async_steps(num_of_steps)
+        G = nx.complete_graph(num_of_normal_agents + num_of_critic_agents)
+        connections_from_graph(menv, G)
+        agents = menv.get_agents(addr=True)
 
-    connection_counts = menv.get_connection_counts()
-    comparison_counts = menv.get_comparison_counts()
-    artifacts_created = menv.get_artifacts_created()
-    mean, _, _ = menv._calc_distances()
+        start_time = time.time()
 
-    menv.save_domain_artifacts(domain_save_folder)
+        sim = Simulation(menv, log_folder=log_folder, callback=menv.vote_and_save_info)
 
-    sim.end()
+        while len(menv.artifacts) < num_of_artifacts:
+            sim.async_step()
+        #sim.async_steps(num_of_steps)
 
-    print_stuff()
+        stats['time'].append(time.time()-start_time)
+        stats['steps'].append(sim.age)
+
+        connection_counts = menv.get_connection_counts()
+        comparison_counts = menv.get_comparison_counts()
+        artifacts_created = menv.get_artifacts_created()
+        mean, _, _ = menv._calc_distances()
+
+        stats['novelty'].append(mean)
+
+        menv.save_domain_artifacts(domain_save_folder)
+
+        sim.end()
+
+        print_stuff()
+
+    directory = 'exp1_results'
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+
+    file = "{}/stats_mem{}-{}_artifacts{}_passing{}_rand{}.p".format(directory, normal_memsize, critic_memsize, num_of_artifacts, ask_criticism, ask_random)
+    pickle.dump(stats, open(file, "wb"))
+
+    analyze(file)
