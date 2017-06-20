@@ -73,18 +73,17 @@ class MazeAgent(VoteAgent):
             evaluation = artifact.evals[self.name]
         else:
             evaluation = self.novelty(artifact.obj)
+            artifact.add_eval(self, evaluation)
         return evaluation, None
 
     def invent(self, n):
         maze = self.create(self.maze_shape[0], self.maze_shape[1], self.choose_func)
         best_artifact = MazeArtifact(self, maze, domain='maze')
         ev, _ = self.evaluate(best_artifact)
-        best_artifact.add_eval(self, ev)
         for i in range(n-1):
             maze = self.create(self.maze_shape[0], self.maze_shape[1], self.choose_func)
             artifact = MazeArtifact(self, maze, domain='maze')
             ev, _ = self.evaluate(artifact)
-            artifact.add_eval(self, ev)
             if ev > best_artifact.evals[self.name]:
                 best_artifact = artifact
 
@@ -119,7 +118,6 @@ class MazeAgent(VoteAgent):
         evaluation, _ = self.evaluate(artifact)
 
         if evaluation >= self._novelty_threshold:
-            artifact.add_eval(self, evaluation)
             #self.learn(artifact, self.teaching_iterations)
             return True, artifact
         else:
