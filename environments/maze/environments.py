@@ -1,5 +1,6 @@
 from creamas.mp import MultiEnvironment
 from creamas.vote import VoteOrganizer, vote_mean
+from creamas.util import run
 
 import aiomas
 from matplotlib import pyplot as plt
@@ -10,21 +11,7 @@ import logging
 import editdistance
 import asyncio
 
-
-class MazeMultiEnvironment(MultiEnvironment):
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.age = 0
-        self.voting_method = vote_mean
-        self.valid_cand = []
-        self.suggested_cand = []
-        logger = logging.getLogger('creamas.spiro.vo')
-        if len(logger.handlers) == 0:
-            logger.addHandler(logging.StreamHandler())
-            logger.setLevel(logging.DEBUG)
-        self.vote_organizer = VoteOrganizer(self, logger=logger)
-
+class StatEnvironment(MultiEnvironment):
     def get_connection_counts(self):
         return self.get_dictionary('get_connection_counts')
 
@@ -45,6 +32,22 @@ class MazeMultiEnvironment(MultiEnvironment):
             dict[name] = aiomas.run(until=func())
 
         return dict
+
+class MazeMultiEnvironment(StatEnvironment):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.age = 0
+        self.voting_method = vote_mean
+        self.valid_cand = []
+        self.suggested_cand = []
+        logger = logging.getLogger('mazes.vo')
+        if len(logger.handlers) == 0:
+            logger.addHandler(logging.StreamHandler())
+            logger.setLevel(logging.DEBUG)
+        self.vote_organizer = VoteOrganizer(self, logger=logger)
+
+
 
     def vote_and_save_info(self, age):
         self.age = age
@@ -120,3 +123,13 @@ class MazeMultiEnvironment(MultiEnvironment):
 
     async def _add_domain_artifact(self, manager_addr, artifact):
         pass
+
+class GatekeeperMazeMultiEnvironment(StatEnvironment):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.gatekeepers = []
+
+    def publish_artifacts(self):
+        for gatekeeper in self.gatekeepers:
+            run(gatekeeper.publish())

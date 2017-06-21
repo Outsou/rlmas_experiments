@@ -12,7 +12,7 @@ import time
 
 
 class MazeAgent(VoteAgent):
-    def __init__(self, environment, choose_func, ask_criticism = True, maze_shape = (40, 40), search_width=10, ask_random=False, critic_threshold = 10, veto_threshold = 10, log_folder=None, log_level=logging.INFO, memsize=100):
+    def __init__(self, environment, choose_func = None, desired_novelty=-1, ask_criticism=True, maze_shape=(40, 40), search_width=10, ask_random=False, critic_threshold=10, veto_threshold=10, log_folder=None, log_level=logging.INFO, memsize=100):
         super().__init__(environment, log_folder=log_folder,
                          log_level=log_level)
 
@@ -29,7 +29,8 @@ class MazeAgent(VoteAgent):
         self.ask_criticism = ask_criticism
         self.comparison_count = 0
         self.artifacts_created = 0
-        self.critics = None
+        self.gatekeepers = None
+        self.desired_novelty = desired_novelty
 
     def create(self, size_x, size_y, choose_cell):
         self.artifacts_created += 1
@@ -38,11 +39,13 @@ class MazeAgent(VoteAgent):
         goal = gt.room2xy(gt.random_room(maze))
         node, expanded, added = ms.solver(maze, start, goal)
         path = ms.get_path(node)
-        maze = ms.draw_path(maze, path)
+        #maze = ms.draw_path(maze, path)
         solution = ms.path_to_string(path)
         obj = {'maze': maze,
                 'start': start,
                 'goal': goal,
+                'path': path,
+                'function': choose_cell,
                 'solution': solution}
         return obj
 
@@ -70,10 +73,17 @@ class MazeAgent(VoteAgent):
 
     def evaluate(self, artifact):
         if self.name in artifact.evals:
-            evaluation = artifact.evals[self.name]
+            return artifact.evals[self.name], None
+
+        novelty = self.novelty(artifact.obj)
+
+        if self.desired_novelty > 0:
+            evaluation = self.hedonic_value(novelty, self.desired_novelty)
         else:
-            evaluation = self.novelty(artifact.obj)
-            artifact.add_eval(self, evaluation)
+            evaluation = novelty
+
+        artifact.add_eval(self, evaluation)
+
         return evaluation, None
 
     def invent(self, n):
@@ -103,8 +113,8 @@ class MazeAgent(VoteAgent):
     @aiomas.expose
     def add_connections(self, conns):
         rets = super().add_connections(conns)
-        self.critics = list(self._connections.keys())
-        length = len(self.critics)
+        self.gatekeepers = list(self._connections.keys())
+        length = len(self.gatekeepers)
         self.bandit_learner = BanditLearner(length)
 
         self.connection_counts = {}
@@ -159,7 +169,7 @@ class MazeAgent(VoteAgent):
                 return
 
             bandit = self.bandit_learner.choose_bandit(rand=self.ask_random)
-            critic = self.critics[bandit]
+            critic = self.gatekeepers[bandit]
             self.connection_counts[critic] += 1
 
             connection = await self.env.connect(critic)

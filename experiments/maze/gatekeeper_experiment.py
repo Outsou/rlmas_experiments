@@ -1,12 +1,9 @@
-from creamas.core import Simulation, Environment
-from creamas.mp import MultiEnvManager
+from creamas.core import Environment
+from creamas.mp import MultiEnvManager, EnvManager
 from creamas.util import run
 from utilities.serializers import get_maze_ser, get_func_ser
 import creamas.nx as cnx
-from environments.maze.environments import MazeMultiEnvironment
-from creamas.vote import VoteEnvironment
-from creamas.vote import VoteManager
-from creamas.logging import ObjectLogger
+from environments.maze.environments import GatekeeperMazeMultiEnvironment
 from mazes.growing_tree import choose_first, choose_random, choose_last
 from utilities.result_analyzer import analyze
 from experiment_simulation import ExperimentSimulation
@@ -55,7 +52,6 @@ def print_stuff():
     artifacts = sum(artifacts_created.values())
     text += 'Comparisons: {}\n'.format(comps)
     text += 'Artifacts created: {}\n'.format(artifacts)
-    text += 'Domain novelty: {}\n'.format(mean)
 
     stats['comps'].append(comps)
     stats['artifacts'].append(artifacts)
@@ -81,11 +77,11 @@ if __name__ == "__main__":
 
     critic_threshold = 0.029
     veto_threshold = 0.029
-    cell_choosing_func = choose_random
+    choose_funcs = [choose_first, choose_random, choose_last]
 
     num_of_artifacts = 5
     num_of_simulations = 5
-    fully_connected = True
+    fully_connected = False
     #num_of_steps = 5
 
     # OTHER STUFF
@@ -112,7 +108,7 @@ if __name__ == "__main__":
     slave_kwargs = [{'extra_serializers': [get_maze_ser, get_func_ser], 'codec': aiomas.MsgPack} for _ in range(len(addrs))]
 
     logger = None
-    stats = {'comps': [], 'novelty': [], 'time': [], 'steps': [], 'artifacts': []}
+    stats = {'comps': [],'time': [], 'steps': [], 'artifacts': []}
 
     sim_count = 0
 
@@ -121,7 +117,7 @@ if __name__ == "__main__":
 
         # Create the environments
 
-        menv = MazeMultiEnvironment(addr,
+        menv = GatekeeperMazeMultiEnvironment(addr,
                                     env_cls=Environment,
                                     mgr_cls=MultiEnvManager,
                                     logger=logger,
@@ -130,8 +126,8 @@ if __name__ == "__main__":
         loop = asyncio.get_event_loop()
 
         ret = run(menv.spawn_slaves(slave_addrs=addrs,
-                                    slave_env_cls=VoteEnvironment,
-                                    slave_mgr_cls=VoteManager,
+                                    slave_env_cls=Environment,
+                                    slave_mgr_cls=EnvManager,
                                     slave_kwargs=slave_kwargs))
 
         ret = run(menv.wait_slaves(30))
@@ -144,33 +140,33 @@ if __name__ == "__main__":
 
         print('Critics:')
         for _ in range(num_of_critic_agents):
-            ret = aiomas.run(until=menv.spawn('agents.maze.maze_agent:MazeAgent',
+            ret = aiomas.run(until=menv.spawn('agents.maze.gatekeeper_agent:GatekeeperAgent',
                                               log_folder=log_folder,
                                               memsize=critic_memsize,
                                               critic_threshold=critic_threshold,
                                               veto_threshold=veto_threshold,
                                               log_level=logging.DEBUG,
-                                              choose_func=cell_choosing_func,
                                               maze_shape=maze_shape,
                                               search_width=critic_search_width,
                                               ask_criticism=ask_criticism,
                                               ask_random=ask_random))
-            print(ret)
-            critic_agents.append(run(ret[0].get_name(), loop))
+
+            menv.gatekeepers.append(ret[0])
+            critic_agents.append(run(ret[0].get_name()))
 
         print('Normies:')
         for _ in range(num_of_normal_agents):
-            ret = aiomas.run(until=menv.spawn('agents.maze.maze_agent:MazeAgent',
+            ret = aiomas.run(until=menv.spawn('agents.maze.creator_agent:CreatorAgent',
                                               log_folder=log_folder,
                                               memsize=normal_memsize,
                                               critic_threshold=critic_threshold,
                                               veto_threshold=veto_threshold,
                                               log_level=logging.DEBUG,
-                                              choose_func=cell_choosing_func,
                                               maze_shape=maze_shape,
                                               search_width=normal_search_width,
                                               ask_criticism=ask_criticism,
-                                              ask_random=ask_random))
+                                              ask_random=ask_random,
+                                              choose_funcs=choose_funcs))
             print(ret)
 
         agents = sorted(menv.get_agents(addr=True))
@@ -196,7 +192,7 @@ if __name__ == "__main__":
 
         cnx.connections_from_graph(menv, G)
 
-        sim = ExperimentSimulation(menv, sim_count, log_folder=log_folder, callback=menv.vote_and_save_info)
+        sim = ExperimentSimulation(menv, sim_count, log_folder=log_folder, callback=menv.publish_artifacts())
 
         start_time = time.time()
 
@@ -210,9 +206,6 @@ if __name__ == "__main__":
         connection_counts = menv.get_connection_counts()
         comparison_counts = menv.get_comparison_counts()
         artifacts_created = menv.get_artifacts_created()
-        mean, _, _ = menv._calc_distances()
-
-        stats['novelty'].append(mean)
 
         #menv.save_domain_artifacts(domain_save_folder)
 
