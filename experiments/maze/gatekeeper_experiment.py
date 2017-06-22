@@ -1,7 +1,7 @@
 from creamas.core import Environment
 from creamas.mp import MultiEnvManager, EnvManager
 from creamas.util import run
-from utilities.serializers import get_maze_ser, get_func_ser
+from utilities.serializers import get_maze_ser, get_func_ser, get_np_array_ser
 import creamas.nx as cnx
 from environments.maze.environments import GatekeeperMazeMultiEnvironment
 from mazes.growing_tree import choose_first, choose_random, choose_last
@@ -51,7 +51,13 @@ def print_stuff():
     comps = sum(comparison_counts.values())
     artifacts = sum(artifacts_created.values())
     text += 'Comparisons: {}\n'.format(comps)
-    text += 'Artifacts created: {}\n'.format(artifacts)
+    text += 'Artifacts created: {}\n\n'.format(artifacts)
+
+    # Print chosen function counts
+    for agent, counts in sorted(choose_func_counts.items()):
+        text += '{}:\n'.format(agent)
+        for func, count in sorted(counts.items(), key=lambda x: x[0].__name__):
+            text += '{}: {}\n'.format(func.__name__, count)
 
     stats['comps'].append(comps)
     stats['artifacts'].append(artifacts)
@@ -62,50 +68,54 @@ def print_stuff():
 if __name__ == "__main__":
     # PARAMS
 
-    num_of_critic_agents = 2
-    num_of_normal_agents = 8
+    num_of_gatekeeper_agents = 2
+    num_of_normal_agents = 10
 
     maze_shape = (32, 32)
 
-    critic_memsize = 144
-    normal_memsize = 16
-    critic_search_width = 2
+    gatekeeper_memsize = 2000
+    normal_memsize = 2000
     normal_search_width = 16
+
+    low_hedonic = 30
+    mid_hedonic = 0.01
+    high_hedonic = 0.1
 
     ask_criticism = True
     ask_random = False
 
     critic_threshold = 0.029
     veto_threshold = 0.029
+    hedonic_std = 10
     choose_funcs = [choose_first, choose_random, choose_last]
 
-    num_of_artifacts = 5
-    num_of_simulations = 5
+    num_of_steps = 10
+    num_of_simulations = 1
     fully_connected = False
-    #num_of_steps = 5
 
     # OTHER STUFF
 
-    log_folder = 'experiment1_logs'
-    domain_save_folder = 'experiment1_mazes'
+    log_folder = 'gatekeeper_logs'
 
-    if os.path.exists(domain_save_folder):
-        shutil.rmtree(domain_save_folder)
-    os.makedirs(domain_save_folder)
+    creator_maze_folder = 'creator_mazes'
+
+    if os.path.exists(creator_maze_folder):
+        shutil.rmtree(creator_maze_folder)
+    os.makedirs(creator_maze_folder)
 
     addr = ('localhost', 5551)
     addrs = [('localhost', 5560),
              ('localhost', 5561),
-             ('localhost', 5562),
-             ('localhost', 5563),
-             ('localhost', 5564),
-             ('localhost', 5565),
-             ('localhost', 5566),
-             ('localhost', 5567),
+             # ('localhost', 5562),
+             # ('localhost', 5563),
+             # ('localhost', 5564),
+             # ('localhost', 5565),
+             # ('localhost', 5566),
+             # ('localhost', 5567),
              ]
 
-    env_kwargs = {'extra_serializers': [get_maze_ser, get_func_ser], 'codec': aiomas.MsgPack}
-    slave_kwargs = [{'extra_serializers': [get_maze_ser, get_func_ser], 'codec': aiomas.MsgPack} for _ in range(len(addrs))]
+    env_kwargs = {'extra_serializers': [get_maze_ser, get_func_ser, get_np_array_ser], 'codec': aiomas.MsgPack}
+    slave_kwargs = [{'extra_serializers': [get_maze_ser, get_func_ser, get_np_array_ser], 'codec': aiomas.MsgPack} for _ in range(len(addrs))]
 
     logger = None
     stats = {'comps': [],'time': [], 'steps': [], 'artifacts': []}
@@ -136,23 +146,24 @@ if __name__ == "__main__":
 
         # Create the agents
 
-        critic_agents = []
+        gatekeeper_agents = []
 
-        print('Critics:')
-        for _ in range(num_of_critic_agents):
+        print('Gatekeepers:')
+        for _ in range(num_of_gatekeeper_agents):
             ret = aiomas.run(until=menv.spawn('agents.maze.gatekeeper_agent:GatekeeperAgent',
                                               log_folder=log_folder,
-                                              memsize=critic_memsize,
+                                              memsize=gatekeeper_memsize,
                                               critic_threshold=critic_threshold,
                                               veto_threshold=veto_threshold,
                                               log_level=logging.DEBUG,
                                               maze_shape=maze_shape,
-                                              search_width=critic_search_width,
                                               ask_criticism=ask_criticism,
-                                              ask_random=ask_random))
+                                              ask_random=ask_random,
+                                              desired_novelty=low_hedonic,
+                                              hedonic_std=hedonic_std))
 
             menv.gatekeepers.append(ret[0])
-            critic_agents.append(run(ret[0].get_name()))
+            gatekeeper_agents.append(run(ret[0].get_name()))
 
         print('Normies:')
         for _ in range(num_of_normal_agents):
@@ -166,7 +177,9 @@ if __name__ == "__main__":
                                               search_width=normal_search_width,
                                               ask_criticism=ask_criticism,
                                               ask_random=ask_random,
-                                              choose_funcs=choose_funcs))
+                                              choose_funcs=choose_funcs,
+                                              desired_novelty=low_hedonic,
+                                              hedonic_std=hedonic_std))
             print(ret)
 
         agents = sorted(menv.get_agents(addr=True))
@@ -174,17 +187,17 @@ if __name__ == "__main__":
         # Create connection graph
 
         if fully_connected:
-            G = nx.complete_graph(num_of_normal_agents + num_of_critic_agents)
+            G = nx.complete_graph(num_of_normal_agents + num_of_gatekeeper_agents)
         else:
             G = nx.DiGraph()
             G.add_nodes_from(list(range(len(agents))))
 
             # Create edges to connect all agents to critics
-            critic_idx = [idx for idx in range(len(agents)) if agents[idx] in critic_agents]
+            gatekeeper_idx = [idx for idx in range(len(agents)) if agents[idx] in gatekeeper_agents]
 
             edges = []
             for i in G.nodes():
-                for j in critic_idx:
+                for j in gatekeeper_idx:
                     if i != j:
                         edges.append((i, j))
 
@@ -192,13 +205,11 @@ if __name__ == "__main__":
 
         cnx.connections_from_graph(menv, G)
 
-        sim = ExperimentSimulation(menv, sim_count, log_folder=log_folder, callback=menv.publish_artifacts())
+        sim = ExperimentSimulation(menv, sim_count, log_folder=log_folder, callback=menv.publish_artifacts)
 
         start_time = time.time()
 
-        while len(menv.artifacts) < num_of_artifacts:
-            sim.async_step()
-        #sim.async_steps(num_of_steps)
+        sim.async_steps(num_of_steps)
 
         stats['time'].append(time.time()-start_time)
         stats['steps'].append(sim.age)
@@ -206,18 +217,20 @@ if __name__ == "__main__":
         connection_counts = menv.get_connection_counts()
         comparison_counts = menv.get_comparison_counts()
         artifacts_created = menv.get_artifacts_created()
+        choose_func_counts = menv.get_choose_func_counts()
 
-        #menv.save_domain_artifacts(domain_save_folder)
+        menv.save_creator_artifacts(creator_maze_folder)
+
 
         sim.end()
 
         print_stuff()
 
-    directory = 'exp1_results'
+    directory = 'gatekeeper_results'
     if not os.path.exists(directory):
         os.makedirs(directory)
 
-    file = "{}/stats_mem{}-{}_artifacts{}_passing{}_rand{}.p".format(directory, normal_memsize, critic_memsize, num_of_artifacts, ask_criticism, ask_random)
+    file = "{}/stats_mem{}-{}_passing{}_rand{}.p".format(directory, normal_memsize, gatekeeper_memsize, ask_criticism, ask_random)
     pickle.dump(stats, open(file, "wb"))
 
     analyze(file)

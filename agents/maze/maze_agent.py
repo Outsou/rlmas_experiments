@@ -12,7 +12,7 @@ import time
 
 
 class MazeAgent(VoteAgent):
-    def __init__(self, environment, choose_func = None, desired_novelty=-1, ask_criticism=True, maze_shape=(40, 40), search_width=10, ask_random=False, critic_threshold=10, veto_threshold=10, log_folder=None, log_level=logging.INFO, memsize=100):
+    def __init__(self, environment, choose_func = None, desired_novelty=-1, ask_criticism=True, maze_shape=(40, 40), search_width=10, ask_random=False, critic_threshold=10, veto_threshold=10, log_folder=None, log_level=logging.INFO, memsize=100, hedonic_std=0.1):
         super().__init__(environment, log_folder=log_folder,
                          log_level=log_level)
 
@@ -31,6 +31,7 @@ class MazeAgent(VoteAgent):
         self.artifacts_created = 0
         self.gatekeepers = None
         self.desired_novelty = desired_novelty
+        self.hedonic_std = hedonic_std
 
     def create(self, size_x, size_y, choose_cell):
         self.artifacts_created += 1
@@ -57,13 +58,11 @@ class MazeAgent(VoteAgent):
     def novelty(self, artifact):
         self.comparison_count += self.stmem.get_comparison_amount()
         distance = self.stmem.distance(artifact)
-        distance = distance / self._get_room_count(artifact) # normalize
         return distance
 
-    @staticmethod
-    def hedonic_value(value, desired_value):
-        lmax = gaus_pdf(desired_value, desired_value, 4)
-        pdf = gaus_pdf(value, desired_value, 4)
+    def hedonic_value(self, value, desired_value):
+        lmax = gaus_pdf(desired_value, desired_value, self.hedonic_std)
+        pdf = gaus_pdf(value, desired_value, self.hedonic_std)
         return pdf / lmax
 
     def _get_room_count(self, artifact):
@@ -108,7 +107,7 @@ class MazeAgent(VoteAgent):
             :py:class:`SpiroArtifact` object
         '''
         for i in range(iterations):
-            self.stmem.train_cycle(artifact.obj)
+            self.stmem.train_cycle(artifact)
 
     @aiomas.expose
     def add_connections(self, conns):
@@ -161,7 +160,7 @@ class MazeAgent(VoteAgent):
 
         if val >= self._own_threshold:
             artifact.self_criticism = 'pass'
-            self.learn(artifact, 1)
+            self.learn(artifact)
 
             if not self.ask_criticism:
                 self.add_candidate(artifact)
@@ -230,10 +229,10 @@ class STMemory():
 
         limit = self.get_comparison_amount()
 
-        mdist = editdistance.eval(artifact['solution'], self.artifacts[0]['solution'])
+        mdist = editdistance.eval(artifact['solution'], self.artifacts[0].obj['solution'])
 
         for i in range(1, limit):
-            dist = editdistance.eval(artifact['solution'], self.artifacts[i]['solution'])
+            dist = editdistance.eval(artifact['solution'], self.artifacts[i].obj['solution'])
             if dist < mdist:
                 mdist = dist
         return mdist

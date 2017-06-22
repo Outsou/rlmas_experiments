@@ -1,6 +1,7 @@
 from creamas.mp import MultiEnvironment
 from creamas.vote import VoteOrganizer, vote_mean
 from creamas.util import run
+import mazes.maze_solver as ms
 
 import aiomas
 from matplotlib import pyplot as plt
@@ -10,6 +11,9 @@ import numpy as np
 import logging
 import editdistance
 import asyncio
+import os
+import shutil
+
 
 class StatEnvironment(MultiEnvironment):
     def get_connection_counts(self):
@@ -32,6 +36,32 @@ class StatEnvironment(MultiEnvironment):
             dict[name] = aiomas.run(until=func())
 
         return dict
+
+    @staticmethod
+    def save_artifact(artifact, folder, id, eval=None):
+        value = 0.7
+        maze = artifact.obj['maze']
+        maze = ms.draw_path(maze, artifact.obj['path'], value)
+
+        masked_array = np.ma.masked_where(maze == value, maze)
+
+        cmap = matplotlib.cm.gray
+        cmap.set_bad(color='blue')
+
+        fig, ax = plt.subplots(1)
+        ax.imshow(masked_array, cmap=cmap, interpolation=None)
+        start = artifact.obj['start']
+        start_circle = patches.Circle((start[1], start[0]), 2, linewidth=2, edgecolor='y', facecolor='none')
+        ax.add_patch(start_circle)
+        goal = artifact.obj['goal']
+        goal_circle = patches.Circle((goal[1], goal[0]), 2, linewidth=2, edgecolor='r', facecolor='none')
+        ax.add_patch(goal_circle)
+
+        if eval is not None:
+            plt.title('Evaluation: {}'.format(eval))
+        plt.savefig('{}/maze_{}.png'.format(folder, id))
+        plt.close()
+
 
 class MazeMultiEnvironment(StatEnvironment):
 
@@ -75,25 +105,7 @@ class MazeMultiEnvironment(StatEnvironment):
         self._calc_distances()
 
         for artifact in self.artifacts:
-            value = 0.7
-            maze = artifact.obj['maze']
-
-            masked_array = np.ma.masked_where(maze == value, maze)
-
-            cmap = matplotlib.cm.gray
-            cmap.set_bad(color='blue')
-
-            fig, ax = plt.subplots(1)
-            ax.imshow(masked_array, cmap=cmap, interpolation=None)
-            start = artifact.obj['start']
-            start_circle = patches.Circle((start[1], start[0]), 2, linewidth=2, edgecolor='y', facecolor='none')
-            ax.add_patch(start_circle)
-            goal = artifact.obj['goal']
-            goal_circle = patches.Circle((goal[1], goal[0]), 2, linewidth=2, edgecolor='r', facecolor='none')
-            ax.add_patch(goal_circle)
-
-            plt.savefig('{}/maze_{}.png'.format(folder, artifact.env_time))
-            plt.close()
+            self.save_artifact(artifact, folder, artifact.env_time)
 
     def _calc_distances(self):
         accepted_x = []
@@ -130,6 +142,39 @@ class GatekeeperMazeMultiEnvironment(StatEnvironment):
         super().__init__(*args, **kwargs)
         self.gatekeepers = []
 
-    def publish_artifacts(self):
+    def publish_artifacts(self, age):
         for gatekeeper in self.gatekeepers:
             run(gatekeeper.publish())
+
+    def get_choose_func_counts(self):
+        agents = self.get_agents(addr=False)
+        counts = {}
+
+        for agent in agents:
+            if agent not in self.gatekeepers:
+                name = run(agent.get_name())
+                counts[name] = run(agent.get_choose_func_counts())
+
+        return counts
+
+    def save_creator_artifacts(self, folder):
+        agents = self.get_agents(addr=False)
+
+        for agent in agents:
+            if agent not in self.gatekeepers:
+                id = 0
+                name = run(agent.get_name())
+                parsed_name = name.replace('://', '_')
+                parsed_name = parsed_name.replace(':', '_')
+                parsed_name = parsed_name.replace('/', '_')
+                agent_folder = folder + '/' + parsed_name
+
+                if os.path.exists(agent_folder):
+                    shutil.rmtree(agent_folder)
+                os.makedirs(agent_folder)
+
+                artifacts = run(agent.get_memory_artifacts())
+
+                for artifact in artifacts:
+                    id += 1
+                    self.save_artifact(artifact, agent_folder, id, artifact.evals[name])

@@ -4,6 +4,7 @@ from artifacts.maze_artifact import MazeArtifact
 
 import numpy as np
 import aiomas
+import logging
 
 class CreatorAgent(MazeAgent):
 
@@ -17,9 +18,18 @@ class CreatorAgent(MazeAgent):
 
     @aiomas.expose
     def deliver_publication(self, artifact):
-        evaluation = self.evaluate(artifact)
-        if evaluation >= self._novelty_threshold:
+        evaluation, _ = self.evaluate(artifact)
+        if artifact.creator != self.name and evaluation >= self._novelty_threshold:
+            self.learn(artifact)
             self.choose_func = artifact.obj['function']
+
+    @aiomas.expose
+    def get_choose_func_counts(self):
+        return self.choose_func_counts
+
+    @aiomas.expose
+    def get_memory_artifacts(self):
+        return self.stmem.artifacts[:self.stmem.length]
 
     @aiomas.expose
     async def act(self):
@@ -28,13 +38,15 @@ class CreatorAgent(MazeAgent):
 
         artifact = self.invent(self.search_width)
         self.choose_func_counts[self.choose_func] += 1
-
         val = artifact.evals[self.name]
         self.add_artifact(artifact)
 
+        novelty = self.novelty(artifact.obj)
+        self._log(logging.INFO, 'Created artifact with novelty {} and hedonic value {} with function {}'.format(novelty, val, self.choose_func.__name__))
+
         if val >= self._own_threshold:
             artifact.self_criticism = 'pass'
-            self.learn(artifact, 1)
+            self.learn(artifact)
 
             if not self.ask_criticism:
                 return

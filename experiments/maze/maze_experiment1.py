@@ -83,7 +83,7 @@ if __name__ == "__main__":
     veto_threshold = 0.029
     cell_choosing_func = choose_random
 
-    num_of_artifacts = 5
+    num_of_artifacts = 30
     num_of_simulations = 5
     fully_connected = True
     #num_of_steps = 5

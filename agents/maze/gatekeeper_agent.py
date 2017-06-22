@@ -19,7 +19,7 @@ class GatekeeperAgent(MazeAgent):
             self.best_art = artifact
 
         if evaluation >= self._novelty_threshold:
-            self.learn(artifact, 1)
+            self.learn(artifact)
             return True, artifact
         else:
             return False, artifact
