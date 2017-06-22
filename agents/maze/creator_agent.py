@@ -10,6 +10,7 @@ class CreatorAgent(MazeAgent):
 
     def __init__(self, environment, choose_funcs, *args, **kwargs):
         super().__init__(environment, *args, **kwargs)
+        self.name = self.name + '_cr_N' + str(self.desired_novelty)
         self.choose_funcs = choose_funcs
         self.choose_func_counts = {}
         for func in self.choose_funcs:
@@ -42,7 +43,9 @@ class CreatorAgent(MazeAgent):
         self.add_artifact(artifact)
 
         novelty = self.novelty(artifact.obj)
-        self._log(logging.INFO, 'Created artifact with novelty {} and hedonic value {} with function {}'.format(novelty, val, self.choose_func.__name__))
+        self._log(logging.INFO,
+                  'Created artifact with novelty {}, hedonic value {} and solution length {} with function {}'
+                  .format(novelty, val, len(artifact.obj['solution']), self.choose_func.__name__))
 
         if val >= self._own_threshold:
             artifact.self_criticism = 'pass'
@@ -63,4 +66,5 @@ class CreatorAgent(MazeAgent):
                 self.bandit_learner.give_reward(bandit, -1)
         else:
             choices = [func for func in self.choose_funcs if func != self.choose_func]
-            self.choose_func = np.random.choice(choices)
+            if len(choices) > 0:
+                self.choose_func = np.random.choice(choices)

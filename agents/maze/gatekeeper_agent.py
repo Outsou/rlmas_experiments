@@ -7,6 +7,7 @@ class GatekeeperAgent(MazeAgent):
 
     def __init__(self, environment, *args, **kwargs):
         super().__init__(environment, *args, **kwargs)
+        self.name = self.name + '_gk_N' + str(self.desired_novelty)
         self.subscriptions = []
         self.best_art = None
 

@@ -26,11 +26,16 @@ def print_stuff():
     chosen_counts = {}
 
     for agent in agents:
+        if agent not in gatekeeper_agents:
+            continue
         chosen_by_agent_counts[agent] = 0
         chosen_counts[agent] = 0
 
     # Print who chose who and how many times
     for connection, counts in sorted(connection_counts.items()):
+        if 'gk' in connection:
+            continue
+
         most_chosen = max(counts.items(), key=operator.itemgetter(1))
         chosen_by_agent_counts[most_chosen[0]] += 1
 
@@ -38,7 +43,7 @@ def print_stuff():
             chosen_counts[agent] += count
 
         text += 'Agent {} chose {} ({} times)\n'.format(connection, most_chosen[0], most_chosen[1])
-        text += str(counts)  + '\n'
+        text += str(counts) + '\n'
 
     text += '\n'
 
@@ -68,28 +73,29 @@ def print_stuff():
 if __name__ == "__main__":
     # PARAMS
 
-    num_of_gatekeeper_agents = 2
-    num_of_normal_agents = 10
+    num_of_low_gatekeepers = 1
+    num_of_high_gatekeepers = 1
+    num_of_low_creators = 5
+    num_of_high_creators = 5
 
     maze_shape = (32, 32)
 
     gatekeeper_memsize = 2000
     normal_memsize = 2000
-    normal_search_width = 16
+    normal_search_width = 10
 
-    low_hedonic = 30
-    mid_hedonic = 0.01
-    high_hedonic = 0.1
+    low_hedonic = 20
+    high_hedonic = 60
 
     ask_criticism = True
     ask_random = False
 
-    critic_threshold = 0.029
-    veto_threshold = 0.029
+    critic_threshold = 0.9
+    veto_threshold = 0.9
     hedonic_std = 10
-    choose_funcs = [choose_first, choose_random, choose_last]
+    choose_funcs = [choose_first, choose_last]
 
-    num_of_steps = 10
+    num_of_steps = 200
     num_of_simulations = 1
     fully_connected = False
 
@@ -106,19 +112,19 @@ if __name__ == "__main__":
     addr = ('localhost', 5551)
     addrs = [('localhost', 5560),
              ('localhost', 5561),
-             # ('localhost', 5562),
-             # ('localhost', 5563),
-             # ('localhost', 5564),
-             # ('localhost', 5565),
-             # ('localhost', 5566),
-             # ('localhost', 5567),
+             ('localhost', 5562),
+             ('localhost', 5563),
+             ('localhost', 5564),
+             ('localhost', 5565),
+             ('localhost', 5566),
+             ('localhost', 5567),
              ]
 
     env_kwargs = {'extra_serializers': [get_maze_ser, get_func_ser], 'codec': aiomas.MsgPack}
     slave_kwargs = [{'extra_serializers': [get_maze_ser, get_func_ser], 'codec': aiomas.MsgPack} for _ in range(len(addrs))]
 
     logger = None
-    stats = {'comps': [],'time': [], 'steps': [], 'artifacts': []}
+    stats = {'comps': [], 'time': [], 'steps': [], 'artifacts': []}
 
     sim_count = 0
 
@@ -128,10 +134,10 @@ if __name__ == "__main__":
         # Create the environments
 
         menv = GatekeeperMazeMultiEnvironment(addr,
-                                    env_cls=Environment,
-                                    mgr_cls=MultiEnvManager,
-                                    logger=logger,
-                                    **env_kwargs)
+                                              env_cls=Environment,
+                                              mgr_cls=MultiEnvManager,
+                                              logger=logger,
+                                              **env_kwargs)
 
         loop = asyncio.get_event_loop()
 
@@ -148,8 +154,7 @@ if __name__ == "__main__":
 
         gatekeeper_agents = []
 
-        print('Gatekeepers:')
-        for _ in range(num_of_gatekeeper_agents):
+        def spawn_gatekeeper(desired_novelty):
             ret = aiomas.run(until=menv.spawn('agents.maze.gatekeeper_agent:GatekeeperAgent',
                                               log_folder=log_folder,
                                               memsize=gatekeeper_memsize,
@@ -159,14 +164,13 @@ if __name__ == "__main__":
                                               maze_shape=maze_shape,
                                               ask_criticism=ask_criticism,
                                               ask_random=ask_random,
-                                              desired_novelty=low_hedonic,
+                                              desired_novelty=desired_novelty,
                                               hedonic_std=hedonic_std))
-
             menv.gatekeepers.append(ret[0])
-            gatekeeper_agents.append(run(ret[0].get_name()))
+            gatekeeper_agents.append(run(ret[0].get_addr()))
+            print(ret)
 
-        print('Normies:')
-        for _ in range(num_of_normal_agents):
+        def spawn_creator(desired_novelty):
             ret = aiomas.run(until=menv.spawn('agents.maze.creator_agent:CreatorAgent',
                                               log_folder=log_folder,
                                               memsize=normal_memsize,
@@ -178,9 +182,25 @@ if __name__ == "__main__":
                                               ask_criticism=ask_criticism,
                                               ask_random=ask_random,
                                               choose_funcs=choose_funcs,
-                                              desired_novelty=low_hedonic,
+                                              desired_novelty=desired_novelty,
                                               hedonic_std=hedonic_std))
             print(ret)
+
+        print('Low gatekeepers:')
+        for _ in range(num_of_low_gatekeepers):
+            spawn_gatekeeper(low_hedonic)
+
+        print('High gatekeepers:')
+        for _ in range(num_of_low_gatekeepers):
+            spawn_gatekeeper(high_hedonic)
+
+        print('Low creators:')
+        for _ in range(num_of_low_creators):
+            spawn_creator(low_hedonic)
+
+        print('High creators:')
+        for _ in range(num_of_high_creators):
+            spawn_creator(high_hedonic)
 
         agents = sorted(menv.get_agents(addr=True))
 
@@ -219,8 +239,7 @@ if __name__ == "__main__":
         artifacts_created = menv.get_artifacts_created()
         choose_func_counts = menv.get_choose_func_counts()
 
-        menv.save_creator_artifacts(creator_maze_folder)
-
+        #menv.save_creator_artifacts(creator_maze_folder)
 
         sim.end()
 

@@ -110,6 +110,10 @@ class MazeAgent(VoteAgent):
             self.stmem.train_cycle(artifact)
 
     @aiomas.expose
+    def get_addr(self):
+        return self.addr
+
+    @aiomas.expose
     def add_connections(self, conns):
         rets = super().add_connections(conns)
         self.gatekeepers = list(self._connections.keys())
