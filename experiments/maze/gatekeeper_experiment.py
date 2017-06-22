@@ -1,7 +1,7 @@
 from creamas.core import Environment
 from creamas.mp import MultiEnvManager, EnvManager
 from creamas.util import run
-from utilities.serializers import get_maze_ser, get_func_ser, get_np_array_ser
+from utilities.serializers import get_maze_ser, get_func_ser
 import creamas.nx as cnx
 from environments.maze.environments import GatekeeperMazeMultiEnvironment
 from mazes.growing_tree import choose_first, choose_random, choose_last
@@ -114,8 +114,8 @@ if __name__ == "__main__":
              # ('localhost', 5567),
              ]
 
-    env_kwargs = {'extra_serializers': [get_maze_ser, get_func_ser, get_np_array_ser], 'codec': aiomas.MsgPack}
-    slave_kwargs = [{'extra_serializers': [get_maze_ser, get_func_ser, get_np_array_ser], 'codec': aiomas.MsgPack} for _ in range(len(addrs))]
+    env_kwargs = {'extra_serializers': [get_maze_ser, get_func_ser], 'codec': aiomas.MsgPack}
+    slave_kwargs = [{'extra_serializers': [get_maze_ser, get_func_ser], 'codec': aiomas.MsgPack} for _ in range(len(addrs))]
 
     logger = None
     stats = {'comps': [],'time': [], 'steps': [], 'artifacts': []}
