@@ -6,6 +6,7 @@ import creamas.nx as cnx
 from environments.maze.environments import GatekeeperMazeMultiEnvironment
 from mazes.growing_tree import choose_first, choose_random, choose_last
 from utilities.result_analyzer import analyze
+from utilities.grapghs import graph_from_connections
 from experiment_simulation import ExperimentSimulation
 
 import asyncio
@@ -224,6 +225,8 @@ if __name__ == "__main__":
             G.add_edges_from(edges)
 
         cnx.connections_from_graph(menv, G)
+        nx.draw(graph_from_connections(menv, True))
+        plt.show()
 
         sim = ExperimentSimulation(menv, sim_count, log_folder=log_folder, callback=menv.publish_artifacts)
 

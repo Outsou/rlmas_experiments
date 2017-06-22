@@ -153,6 +153,10 @@ class MazeAgent(VoteAgent):
         return self.name
 
     @aiomas.expose
+    def get_desired_novelty(self):
+        return self.desired_novelty
+
+    @aiomas.expose
     async def act(self):
         self.age += 1
         self.bandit_learner.increment_iteration_count()
