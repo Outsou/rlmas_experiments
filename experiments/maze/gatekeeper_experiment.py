@@ -6,7 +6,7 @@ import creamas.nx as cnx
 from environments.maze.environments import GatekeeperMazeMultiEnvironment
 from mazes.growing_tree import choose_first, choose_random, choose_last
 from utilities.result_analyzer import analyze
-from utilities.grapghs import graph_from_connections
+from utilities.graphs import graph_from_connections
 from experiment_simulation import ExperimentSimulation
 
 import asyncio
@@ -65,6 +65,13 @@ def print_stuff():
         for func, count in sorted(counts.items(), key=lambda x: x[0].__name__):
             text += '{}: {}\n'.format(func.__name__, count)
 
+    text += '\n'
+
+    # Print overcame self criticism counts
+    for agent, counts in sorted(passed_self_criticism_counts.items()):
+        if 'gk' not in agent:
+            text += '{} passed self criticism {} times\n'.format(agent, counts)
+
     stats['comps'].append(comps)
     stats['artifacts'].append(artifacts)
 
@@ -110,15 +117,15 @@ if __name__ == "__main__":
         shutil.rmtree(creator_maze_folder)
     os.makedirs(creator_maze_folder)
 
-    addr = ('localhost', 5551)
+    addr = ('localhost', 5550)
     addrs = [('localhost', 5560),
              ('localhost', 5561),
-             ('localhost', 5562),
-             ('localhost', 5563),
-             ('localhost', 5564),
-             ('localhost', 5565),
-             ('localhost', 5566),
-             ('localhost', 5567),
+             # ('localhost', 5562),
+             # ('localhost', 5563),
+             # ('localhost', 5564),
+             # ('localhost', 5565),
+             # ('localhost', 5566),
+             # ('localhost', 5567),
              ]
 
     env_kwargs = {'extra_serializers': [get_maze_ser, get_func_ser], 'codec': aiomas.MsgPack}
@@ -225,8 +232,8 @@ if __name__ == "__main__":
             G.add_edges_from(edges)
 
         cnx.connections_from_graph(menv, G)
-        nx.draw(graph_from_connections(menv, True))
-        plt.show()
+        # nx.draw(graph_from_connections(menv, True))
+        # plt.show()
 
         sim = ExperimentSimulation(menv, sim_count, log_folder=log_folder, callback=menv.publish_artifacts)
 
@@ -241,6 +248,7 @@ if __name__ == "__main__":
         comparison_counts = menv.get_comparison_counts()
         artifacts_created = menv.get_artifacts_created()
         choose_func_counts = menv.get_choose_func_counts()
+        passed_self_criticism_counts = menv.get_passed_self_criticism_counts()
 
         #menv.save_creator_artifacts(creator_maze_folder)
 

@@ -49,6 +49,7 @@ class CreatorAgent(MazeAgent):
 
         if val >= self._own_threshold:
             artifact.self_criticism = 'pass'
+            self.passed_self_criticism_count += 1
             self.learn(artifact)
 
             if not self.ask_criticism:

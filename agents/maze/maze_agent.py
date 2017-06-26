@@ -27,11 +27,13 @@ class MazeAgent(VoteAgent):
         self.connection_counts = None
         self.choose_func = choose_func
         self.ask_criticism = ask_criticism
-        self.comparison_count = 0
-        self.artifacts_created = 0
         self.gatekeepers = None
         self.desired_novelty = desired_novelty
         self.hedonic_std = hedonic_std
+
+        self.comparison_count = 0
+        self.artifacts_created = 0
+        self.passed_self_criticism_count = 0
 
     def create(self, size_x, size_y, choose_cell):
         self.artifacts_created += 1
@@ -157,6 +159,10 @@ class MazeAgent(VoteAgent):
         return self.desired_novelty
 
     @aiomas.expose
+    def get_passed_self_criticism_count(self):
+        return self.passed_self_criticism_count
+
+    @aiomas.expose
     async def act(self):
         self.age += 1
         self.bandit_learner.increment_iteration_count()
@@ -168,6 +174,7 @@ class MazeAgent(VoteAgent):
 
         if val >= self._own_threshold:
             artifact.self_criticism = 'pass'
+            self.passed_self_criticism_count += 1
             self.learn(artifact)
 
             if not self.ask_criticism:

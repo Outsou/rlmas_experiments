@@ -25,6 +25,9 @@ class StatEnvironment(MultiEnvironment):
     def get_artifacts_created(self):
         return self.get_dictionary('get_artifacts_created')
 
+    def get_passed_self_criticism_counts(self):
+        return self.get_dictionary('get_passed_self_criticism_count')
+
     def get_dictionary(self, func_name):
         agents = self.get_agents(addr=False)
 
