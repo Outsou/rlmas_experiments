@@ -28,7 +28,7 @@ class BanditLearner():
         self.bandits[bandit] = self.sums[bandit] / self.counts[bandit]
         self._check_max_bandit(bandit, reward)
 
-    def give_reward_q_style(self, bandit, reward, discount_factor, learning_factor):
+    def give_reward_q_style(self, bandit, reward, discount_factor = 0.95, learning_factor=0.9):
         old_value = self.bandits[bandit]
         self.bandits[bandit] += learning_factor * (reward + discount_factor * old_value - old_value)
         self._check_max_bandit(bandit, -1)

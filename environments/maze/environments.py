@@ -155,6 +155,9 @@ class GatekeeperMazeMultiEnvironment(StatEnvironment):
     def get_published_counts(self):
         return self.get_creator_dictionary('get_published_count')
 
+    def get_func_values(self):
+        return self.get_creator_dictionary('get_func_values')
+
     def get_creator_dictionary(self, func_name):
         agents = self.get_agents(addr=False)
 

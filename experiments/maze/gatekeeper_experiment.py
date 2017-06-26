@@ -63,7 +63,7 @@ def print_stuff():
     for agent, counts in sorted(choose_func_counts.items()):
         text += '{}:\n'.format(agent)
         for func, count in sorted(counts.items(), key=lambda x: x[0].__name__):
-            text += '{}: {}\n'.format(func.__name__, count)
+            text += '{}: {} (value: {})\n'.format(func.__name__, count, func_values[agent][func])
 
     text += '\n'
 
@@ -250,6 +250,7 @@ if __name__ == "__main__":
         choose_func_counts = menv.get_choose_func_counts()
         passed_self_criticism_counts = menv.get_passed_self_criticism_counts()
         published_counts = menv.get_published_counts()
+        func_values = menv.get_func_values()
 
         #menv.save_creator_artifacts(creator_maze_folder)
 

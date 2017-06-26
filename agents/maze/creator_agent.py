@@ -1,6 +1,5 @@
 from agents.maze.maze_agent import MazeAgent
-import mazes.maze_solver as ms
-from artifacts.maze_artifact import MazeArtifact
+from rl.bandit_learner import BanditLearner
 
 import numpy as np
 import aiomas
@@ -17,6 +16,7 @@ class CreatorAgent(MazeAgent):
             self.choose_func_counts[func] = 0
         self.choose_func = np.random.choice(self.choose_funcs)
         self.published_count = 0
+        self.func_learner = BanditLearner(len(choose_funcs))
 
     @aiomas.expose
     def deliver_publication(self, artifact):
@@ -25,7 +25,8 @@ class CreatorAgent(MazeAgent):
             self.published_count += 1
         elif evaluation >= self._novelty_threshold:
             self.learn(artifact)
-            self.choose_func = artifact.obj['function']
+            idx = self.choose_funcs.index(artifact.obj['function'])
+            self.func_learner.give_reward_q_style(idx, evaluation)
 
     @aiomas.expose
     def get_choose_func_counts(self):
@@ -40,14 +41,24 @@ class CreatorAgent(MazeAgent):
         return self.published_count
 
     @aiomas.expose
+    def get_func_values(self):
+        values = {}
+        for i in range(len(self.choose_funcs)):
+            values[self.choose_funcs[i]] = self.func_learner.bandits[i]
+        return values
+
+    @aiomas.expose
     async def act(self):
         self.age += 1
         self.bandit_learner.increment_iteration_count()
 
-        artifact = self.invent(self.search_width)
+        idx = self.func_learner.choose_bandit()
+        self.choose_func = self.choose_funcs[idx]
         self.choose_func_counts[self.choose_func] += 1
+        artifact = self.invent(self.search_width)
         val = artifact.evals[self.name]
         self.add_artifact(artifact)
+        self.func_learner.give_reward_q_style(idx, val)
 
         novelty = self.novelty(artifact.obj)
         self._log(logging.INFO,
