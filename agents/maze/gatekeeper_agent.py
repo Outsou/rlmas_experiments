@@ -30,6 +30,8 @@ class GatekeeperAgent(MazeAgent):
         for sub in self.subscriptions:
             connection = await self.env.connect(sub)
             await connection.deliver_publication(self.best_art)
+        self.best_art = None
+        self.subscriptions = []
 
     @aiomas.expose
     async def act(self):

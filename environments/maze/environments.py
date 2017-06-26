@@ -150,15 +150,23 @@ class GatekeeperMazeMultiEnvironment(StatEnvironment):
             run(gatekeeper.publish())
 
     def get_choose_func_counts(self):
+        return self.get_creator_dictionary('get_choose_func_counts')
+
+    def get_published_counts(self):
+        return self.get_creator_dictionary('get_published_count')
+
+    def get_creator_dictionary(self, func_name):
         agents = self.get_agents(addr=False)
-        counts = {}
+
+        dict = {}
 
         for agent in agents:
             if agent not in self.gatekeepers:
                 name = run(agent.get_name())
-                counts[name] = run(agent.get_choose_func_counts())
+                func = getattr(agent, func_name)
+                dict[name] = run(func())
 
-        return counts
+        return dict
 
     def save_creator_artifacts(self, folder):
         agents = self.get_agents(addr=False)

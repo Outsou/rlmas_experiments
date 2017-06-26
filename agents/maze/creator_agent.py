@@ -16,11 +16,14 @@ class CreatorAgent(MazeAgent):
         for func in self.choose_funcs:
             self.choose_func_counts[func] = 0
         self.choose_func = np.random.choice(self.choose_funcs)
+        self.published_count = 0
 
     @aiomas.expose
     def deliver_publication(self, artifact):
         evaluation, _ = self.evaluate(artifact)
-        if artifact.creator != self.name and evaluation >= self._novelty_threshold:
+        if artifact.creator == self.name:
+            self.published_count += 1
+        elif evaluation >= self._novelty_threshold:
             self.learn(artifact)
             self.choose_func = artifact.obj['function']
 
@@ -31,6 +34,10 @@ class CreatorAgent(MazeAgent):
     @aiomas.expose
     def get_memory_artifacts(self):
         return self.stmem.artifacts[:self.stmem.length]
+
+    @aiomas.expose
+    def get_published_count(self):
+        return self.published_count
 
     @aiomas.expose
     async def act(self):

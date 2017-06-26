@@ -70,7 +70,7 @@ def print_stuff():
     # Print overcame self criticism counts
     for agent, counts in sorted(passed_self_criticism_counts.items()):
         if 'gk' not in agent:
-            text += '{} passed self criticism {} times\n'.format(agent, counts)
+            text += '{} passed self criticism {} and was published {} times\n'.format(agent, counts, published_counts[agent])
 
     stats['comps'].append(comps)
     stats['artifacts'].append(artifacts)
@@ -249,6 +249,7 @@ if __name__ == "__main__":
         artifacts_created = menv.get_artifacts_created()
         choose_func_counts = menv.get_choose_func_counts()
         passed_self_criticism_counts = menv.get_passed_self_criticism_counts()
+        published_counts = menv.get_published_counts()
 
         #menv.save_creator_artifacts(creator_maze_folder)
 
