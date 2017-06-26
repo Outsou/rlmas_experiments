@@ -18,6 +18,7 @@ import shutil
 import logging
 import time
 import pickle
+import numpy as np
 import matplotlib.pyplot as plt
 
 
@@ -63,14 +64,37 @@ def print_stuff():
     for agent, counts in sorted(choose_func_counts.items()):
         text += '{}:\n'.format(agent)
         for func, count in sorted(counts.items(), key=lambda x: x[0].__name__):
-            text += '{}: {} (value: {})\n'.format(func.__name__, count, func_values[agent][func])
+            text += '{}: {} (value: {})\n'.format(func.__name__, count, np.around(func_values[agent][func], 2))
+        text += '------------------------------\n'
 
     text += '\n'
 
     # Print overcame self criticism counts
-    for agent, counts in sorted(passed_self_criticism_counts.items()):
+    for agent, count in sorted(passed_self_criticism_counts.items()):
         if 'gk' not in agent:
-            text += '{} passed self criticism {} and was published {} times\n'.format(agent, counts, published_counts[agent])
+            published_count = published_counts[agent]
+            if count == 0:
+                rate = 0
+            else:
+                rate = np.around(published_count/count*100, 2)
+            text += '{} passed self criticism {} and was published {} times, with {}% success rate\n'\
+                .format(agent, count, published_count, rate)
+
+    text += '\n'
+
+    # Count and print how many times a gatekeeper published a creator
+    publish_counts = {}
+    for gatekeeper, creators in published_creators.items():
+        publish_counts[gatekeeper] = {}
+        for creator in creators:
+            if creator not in publish_counts[gatekeeper]:
+                publish_counts[gatekeeper][creator] = 1
+            else:
+                publish_counts[gatekeeper][creator] += 1
+
+    for gatekeeper, creator_counts in publish_counts.items():
+        text += 'Gatekeeper {} published {} times\n'.format(gatekeeper, sum(creator_counts.values()))
+        text += str(creator_counts) + '\n'
 
     stats['comps'].append(comps)
     stats['artifacts'].append(artifacts)
@@ -88,8 +112,8 @@ if __name__ == "__main__":
 
     maze_shape = (32, 32)
 
-    gatekeeper_memsize = 2000
-    normal_memsize = 2000
+    gatekeeper_memsize = 20000
+    normal_memsize = 20000
     normal_search_width = 10
 
     low_hedonic = 20
@@ -103,7 +127,7 @@ if __name__ == "__main__":
     hedonic_std = 10
     choose_funcs = [choose_first, choose_last]
 
-    num_of_steps = 200
+    num_of_steps = 5000
     num_of_simulations = 1
     fully_connected = False
 
@@ -120,12 +144,12 @@ if __name__ == "__main__":
     addr = ('localhost', 5550)
     addrs = [('localhost', 5560),
              ('localhost', 5561),
-             # ('localhost', 5562),
-             # ('localhost', 5563),
-             # ('localhost', 5564),
-             # ('localhost', 5565),
-             # ('localhost', 5566),
-             # ('localhost', 5567),
+             ('localhost', 5562),
+             ('localhost', 5563),
+             ('localhost', 5564),
+             ('localhost', 5565),
+             ('localhost', 5566),
+             ('localhost', 5567),
              ]
 
     env_kwargs = {'extra_serializers': [get_maze_ser, get_func_ser], 'codec': aiomas.MsgPack}
@@ -251,6 +275,7 @@ if __name__ == "__main__":
         passed_self_criticism_counts = menv.get_passed_self_criticism_counts()
         published_counts = menv.get_published_counts()
         func_values = menv.get_func_values()
+        published_creators = menv.get_published_creators()
 
         #menv.save_creator_artifacts(creator_maze_folder)
 

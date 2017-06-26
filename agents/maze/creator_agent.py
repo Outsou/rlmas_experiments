@@ -17,6 +17,7 @@ class CreatorAgent(MazeAgent):
         self.choose_func = np.random.choice(self.choose_funcs)
         self.published_count = 0
         self.func_learner = BanditLearner(len(choose_funcs))
+        self.func_learner.set_values(10)
 
     @aiomas.expose
     def deliver_publication(self, artifact):
@@ -83,7 +84,3 @@ class CreatorAgent(MazeAgent):
                 self.bandit_learner.give_reward(bandit, 1)
             else:
                 self.bandit_learner.give_reward(bandit, -1)
-        else:
-            choices = [func for func in self.choose_funcs if func != self.choose_func]
-            if len(choices) > 0:
-                self.choose_func = np.random.choice(choices)

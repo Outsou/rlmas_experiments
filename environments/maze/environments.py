@@ -158,6 +158,9 @@ class GatekeeperMazeMultiEnvironment(StatEnvironment):
     def get_func_values(self):
         return self.get_creator_dictionary('get_func_values')
 
+    def get_published_creators(self):
+        return self.get_gatekeeper_dictionary('get_published_creators')
+
     def get_creator_dictionary(self, func_name):
         agents = self.get_agents(addr=False)
 
@@ -168,6 +171,16 @@ class GatekeeperMazeMultiEnvironment(StatEnvironment):
                 name = run(agent.get_name())
                 func = getattr(agent, func_name)
                 dict[name] = run(func())
+
+        return dict
+
+    def get_gatekeeper_dictionary(self, func_name):
+        dict = {}
+
+        for agent in self.gatekeepers:
+            name = run(agent.get_name())
+            func = getattr(agent, func_name)
+            dict[name] = run(func())
 
         return dict
 
