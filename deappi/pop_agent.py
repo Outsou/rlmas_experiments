@@ -10,18 +10,41 @@ from deap import tools
 
 
 class PopAgent(CreativeAgent):
-    def __init__(self, env, pop, *args, **kwargs):
+    def __init__(self, env, pset, mate_func, *args, **kwargs):
         super().__init__(env, *args, **kwargs)
-        self.pop = pop
-        self.toolbox = self.create_toolbox()
+        self.pset = pset
+        self.pop = self.create_pop(10)
+        self.toolbox = self.create_toolbox(mate_func)
 
-    @staticmethod
-    def create_toolbox():
+    def create_pop(self, size):
+        creator.create("FitnessMax", base.Fitness, weights=(1.0,))
+        creator.create("Individual", gp.PrimitiveTree, fitness=creator.FitnessMax,
+                       pset=self.pset)
+
         toolbox = base.Toolbox()
-        toolbox.register("mate", gp.cxOnePoint)
-        toolbox.register("mutate", gp.mutInsert, pset=pset)
+        toolbox.register("expr", gp.genHalfAndHalf, pset=self.pset, min_=2, max_=3)
+        toolbox.register("individual", tools.initIterate, creator.Individual,
+                         toolbox.expr)
+        toolbox.register("population", tools.initRepeat, list, toolbox.individual)
+
+        return toolbox.population(n=size)
+
+    def evaluate(self, individual):
+        return np.random.random(),
+
+    def print_name(self):
+        print(self.name)
+
+    def create_toolbox(self, mate_func):
+        toolbox = base.Toolbox()
+        if mate_func.__name__ == 'cxOnePoint':
+            toolbox.register("mate", mate_func)
+        else:
+            toolbox.register("mate", mate_func, termpb=0.5)
+        toolbox.register("mutate", gp.mutInsert, pset=self.pset)
         toolbox.register("select", tools.selDoubleTournament, fitness_size=3, parsimony_size=1.4, fitness_first=True)
-        toolbox.register("evaluate", evaluate)
+        toolbox.register("evaluate", self.evaluate)
+        toolbox.register("print_name", self.print_name)
 
         return toolbox
 
@@ -64,4 +87,6 @@ class PopAgent(CreativeAgent):
 
     @aiomas.expose
     async def act(self, *args, **kwargs):
-        self.pop = self.evolve_population(self.pop, 10)
+        self.pop = self.evolve_population(self.pop, 100)
+        self.toolbox.print_name()
+        print(self.toolbox.mate)

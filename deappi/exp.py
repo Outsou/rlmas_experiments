@@ -1,13 +1,10 @@
 from creamas.core import Environment, Simulation
 from creamas.mp import MultiEnvManager, EnvManager, MultiEnvironment
 from creamas.util import run
-from utilities.result_analyzer import analyze
+from utilities.serializers import get_primitive_ser, get_terminal_ser, get_primitive_set_ser, get_func_ser
 
 import asyncio
 import aiomas
-import os
-import time
-import pickle
 
 
 if __name__ == "__main__":
@@ -26,8 +23,8 @@ if __name__ == "__main__":
              ('localhost', 5567),
              ]
 
-    env_kwargs = {'extra_serializers': [], 'codec': aiomas.MsgPack}
-    slave_kwargs = [{'extra_serializers': [], 'codec': aiomas.MsgPack} for _ in range(len(addrs))]
+    env_kwargs = {'extra_serializers': [get_primitive_ser, get_terminal_ser, get_primitive_set_ser, get_func_ser], 'codec': aiomas.MsgPack}
+    slave_kwargs = [{'extra_serializers': [get_primitive_ser, get_terminal_ser, get_primitive_set_ser, get_func_ser], 'codec': aiomas.MsgPack} for _ in range(len(addrs))]
 
     logger = None
 
@@ -74,26 +71,24 @@ if __name__ == "__main__":
     # pset.addPrimitive(exp, 1)
     #pset.addPrimitive(np.sqrt, 1)
     # pset.addPrimitive(log, 1)
-    pset.addEphemeralConstant('rand', lambda: np.random.randint(1, 4))
+    # pset.addEphemeralConstant('rand', lambda: np.random.randint(1, 4))
 
     pset.renameArguments(ARG0="x")
     pset.renameArguments(ARG1="y")
 
-    creator.create("FitnessMax", base.Fitness, weights=(1.0,))
-    creator.create("Individual", gp.PrimitiveTree, fitness=creator.FitnessMax,
-                   pset=pset)
-
-    toolbox = base.Toolbox()
-    toolbox.register("expr", gp.genHalfAndHalf, pset=pset, min_=2, max_=3)
-    toolbox.register("individual", tools.initIterate, creator.Individual,
-                     toolbox.expr)
-    toolbox.register("population", tools.initRepeat, list, toolbox.individual)
-
-    for _ in range(10):
-        pop = toolbox.population(n=10)
-        ret = aiomas.run(until=menv.spawn('deap.pop_agent:PopAgent',
+    for _ in range(1):
+        ret = aiomas.run(until=menv.spawn('deappi.pop_agent:PopAgent',
                                           log_folder=log_folder,
-                                          pop=pop))
+                                          pset=pset,
+                                          mate_func=gp.cxOnePoint))
+
+        print(ret)
+
+    for _ in range(1):
+        ret = aiomas.run(until=menv.spawn('deappi.pop_agent:PopAgent',
+                                          log_folder=log_folder,
+                                          pset=pset,
+                                          mate_func=gp.cxOnePointLeafBiased))
 
         print(ret)
 
