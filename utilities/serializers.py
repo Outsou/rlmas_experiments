@@ -5,6 +5,7 @@ from artifacts.maze_artifact import MazeArtifact
 from deap.gp import Primitive
 from deap.gp import Terminal
 from deap.gp import PrimitiveSet
+from deap.base import Toolbox
 
 import pickle
 from types import FunctionType
@@ -40,3 +41,9 @@ def get_terminal_ser():
 
 def get_primitive_set_ser():
     return PrimitiveSet, pickle.dumps, pickle.loads
+
+def get_toolbox_ser():
+    return Toolbox, pickle.dumps, pickle.loads
+
+def get_type_ser():
+    return type, pickle.dumps, pickle.loads
