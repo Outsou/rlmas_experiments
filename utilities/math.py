@@ -34,25 +34,24 @@ def box_count(image):
     pixels = []
     for i in range(image.shape[0]):
         for j in range(image.shape[1]):
-            if image[i,j] > 0:
+            if image[i, j] > 0:
                 pixels.append((i, j))
-
     lx = image.shape[1]
     ly = image.shape[0]
     pixels = pl.array(pixels)
-
-    scales = np.logspace(1, 6, num=20, endpoint=False, base=2)
+    if len(pixels) < 2:
+        return 0
+    scales = np.logspace(1, 4, num=20, endpoint=False, base=2)
     Ns = []
-
     for scale in scales:
-        print('Scale: ' + str(scale))
+        # print('Scale: ' + str(scale))
         H, edges = np.histogramdd(pixels, bins=(np.arange(0, lx, scale), np.arange(0, ly, scale)))
-        Ns.append(np.sum(H > 0))
+        H_sum = np.sum(H > 0)
+        if H_sum == 0:
+            H_sum = 1
+        Ns.append(H_sum)
 
     coeffs = np.polyfit(np.log(scales), np.log(Ns), 1)
+    hausdorff_dim = -coeffs[0]
 
-    asd = zip(scales, Ns)
-    for thing in asd:
-        print(thing)
-
-    print('The Hausdorff dimension is: ' + str(-coeffs[0]))
+    return hausdorff_dim

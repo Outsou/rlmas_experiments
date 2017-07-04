@@ -1,5 +1,6 @@
 from creamas.examples.spiro.spiro_agent import SpiroArtifact
 from creamas.examples.spiro.spiro_agent_mp import SpiroArtifact as SpiroArtifactMP
+from creamas.rules import RuleLeaf
 from artifacts.spr_artifact import SpiroArtifact as SpiroArtifactOwn
 from artifacts.maze_artifact import MazeArtifact
 from deap.gp import Primitive
@@ -47,3 +48,6 @@ def get_toolbox_ser():
 
 def get_type_ser():
     return type, pickle.dumps, pickle.loads
+
+def get_rule_leaf_ser():
+    return RuleLeaf, pickle.dumps, pickle.loads

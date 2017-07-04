@@ -1,23 +1,26 @@
 from creamas.rules.agent import RuleAgent
 from creamas.math import gaus_pdf
+from creamas.mappers import LinearMapper
+from creamas.rules import RuleLeaf
+from artifacts.features import NoveltyFeature
 from rl.bandit_learner import BanditLearner
 
 import logging
 import aiomas
 import numpy as np
+from matplotlib import pyplot as plt
 
 
 class FeatureAgent(RuleAgent):
-    def __init__(self, environment, artifact_cls, create_kwargs, desired_novelty=-1,
+    def __init__(self, environment, artifact_cls, create_kwargs, rules, desired_novelty=-1,
                  ask_criticism=True, search_width=10, ask_random=False,
-                 critic_threshold=10, veto_threshold=10, log_folder=None,
+                 critic_threshold=0.5, veto_threshold=0.5, log_folder=None,
                  log_level=logging.INFO, memsize=100, hedonic_std=0.1):
         super().__init__(environment, log_folder=log_folder,
                          log_level=log_level)
 
         self.stmem = STMemory(artifact_cls=artifact_cls, length=memsize, max_length=memsize)
         self.artifact_cls = artifact_cls
-        self.age = 0
         self._own_threshold = critic_threshold
         self._novelty_threshold = veto_threshold
         self.search_width = search_width
@@ -34,6 +37,12 @@ class FeatureAgent(RuleAgent):
         self.artifacts_created = 0
         self.passed_self_criticism_count = 0
 
+        novelty_rule = RuleLeaf(NoveltyFeature(self),
+                                LinearMapper(0, artifact_cls.max_distance_kwargs(self.create_kwargs), '01'))
+        self.add_rule(novelty_rule, 1.)
+        for rule in rules:
+            self.add_rule(rule[0], rule[1])
+
     def novelty(self, artifact):
         self.comparison_count += self.stmem.get_comparison_amount()
         distance = self.stmem.distance(artifact)
@@ -48,12 +57,7 @@ class FeatureAgent(RuleAgent):
         if self.name in artifact.evals:
             return artifact.evals[self.name], None
 
-        novelty = self.novelty(artifact)
-
-        if self.desired_novelty > 0:
-            evaluation = self.hedonic_value(novelty, self.desired_novelty)
-        else:
-            evaluation = novelty
+        evaluation, _ = super().evaluate(artifact)
 
         artifact.add_eval(self, evaluation)
 
@@ -64,10 +68,6 @@ class FeatureAgent(RuleAgent):
         return best_artifact
 
     def learn(self, artifact, iterations=1):
-        '''Train short term memory with given spirograph.
-        :param spiro:
-            :py:class:`SpiroArtifact` object
-        '''
         for i in range(iterations):
             self.stmem.train_cycle(artifact)
 
@@ -124,38 +124,39 @@ class FeatureAgent(RuleAgent):
 
     @aiomas.expose
     async def act(self):
-        art = self.invent(10)
-        # self.age += 1
-        # self.bandit_learner.increment_iteration_count()
-        #
-        # artifact = self.invent(self.search_width)
-        #
-        # val = artifact.evals[self.name]
-        # self.add_artifact(artifact)
-        #
-        # if val >= self._own_threshold:
-        #     artifact.self_criticism = 'pass'
-        #     self.passed_self_criticism_count += 1
-        #     self.learn(artifact)
-        #
-        #     if not self.ask_criticism:
-        #         self.add_candidate(artifact)
-        #         self.added_last = True
-        #         return
-        #
-        #     bandit = self.bandit_learner.choose_bandit(rand=self.ask_random)
-        #     critic = self.gatekeepers[bandit]
-        #     self.connection_counts[critic] += 1
-        #
-        #     connection = await self.env.connect(critic)
-        #     passed, artifact = await connection.get_criticism(artifact)
-        #
-        #     if passed:
-        #         self.bandit_learner.give_reward(bandit, -1)
-        #         self.add_candidate(artifact)
-        #         self.added_last = True
-        #     else:
-        #         self.bandit_learner.give_reward(bandit, 1)
+        artifact = self.invent(self.search_width)
+        val = artifact.evals[self.name]
+        self._log(logging.INFO, 'Created artifact with value {}'.format(val))
+        self.add_artifact(artifact)
+
+        if val >= self._own_threshold:
+            artifact.self_criticism = 'pass'
+            self.passed_self_criticism_count += 1
+            self.learn(artifact)
+
+            if self.bandit_learner is None:
+                return
+
+            bandit = self.bandit_learner.choose_bandit(rand=self.ask_random)
+            critic = self.gatekeepers[bandit]
+            self.connection_counts[critic] += 1
+
+            connection = await self.env.connect(critic)
+            passed, artifact = await connection.get_criticism(artifact)
+
+            if passed:
+                self.bandit_learner.give_reward(bandit, 1)
+            else:
+                self.bandit_learner.give_reward(bandit, -1)
+
+    @aiomas.expose
+    def save_artifacts(self, folder):
+        i = 0
+        for art in reversed(self.stmem.artifacts[:self.stmem.length]):
+            i += 1
+            plt.imshow(art.obj, cmap='gray', shape=art.obj.shape)
+            plt.title('Eval: {}'.format(art.evals[self.name]))
+            plt.savefig('{}/artifact{}'.format(folder, i))
 
 
 class STMemory:
@@ -186,7 +187,7 @@ class STMemory:
 
     def distance(self, artifact):
         limit = self.get_comparison_amount()
-        mdist = self.artifact_cls.max_distance(artifact)
+        mdist = self.artifact_cls.max_distance_artifact(artifact)
         if limit == 0:
             return np.random.random() * mdist
         for a in self.artifacts[:limit]:

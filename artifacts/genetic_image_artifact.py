@@ -21,15 +21,22 @@ class GeneticImageArtifact(Artifact):
         return self._pset
 
     @staticmethod
-    def max_distance(artifact):
+    def max_distance_kwargs(create_kwargs):
+        shape = create_kwargs['shape']
+        return np.sqrt(shape[0])
+
+    @staticmethod
+    def max_distance_artifact(artifact):
         return np.sqrt(artifact.obj.shape[0])
 
     @staticmethod
     def distance(artifact1, artifact2):
-        return np.sqrt(np.sum(np.square(artifact1 - artifact2)))
+        return np.sqrt(np.sum(np.square(artifact1.obj - artifact2.obj)))
 
     @staticmethod
-    def generate_image(individual, width=32, height=32):
+    def generate_image(individual, shape=(32,32)):
+        width = shape[0]
+        height = shape[1]
         func = gp.compile(individual, individual.pset)
         image = np.zeros((width, height))
 
@@ -39,20 +46,20 @@ class GeneticImageArtifact(Artifact):
             y = coord[1]
             x_normalized = x / width - 0.5
             y_normalized = y / height - 0.5
-            color_value = np.abs(func(x_normalized, y_normalized)) * 255
-            image[x, y] = np.around(color_value)
+            color_value = np.abs(func(x_normalized, y_normalized))
+            image[x, y] = color_value
 
             if image[x, y] < 0:
                 image[x, y] = 0
-            elif image[x, y] > 255:
-                image[x, y] = 255
+            elif image[x, y] > 1:
+                image[x, y] = 1
 
         return image
 
     @staticmethod
-    def evaluate(individual, agent):
+    def evaluate(individual, agent, shape):
         if individual.image is None:
-            image = GeneticImageArtifact.generate_image(individual)
+            image = GeneticImageArtifact.generate_image(individual, shape)
             individual.image = image
         artifact = GeneticImageArtifact(agent, individual.image, individual)
         evaluation, _ = agent.evaluate(artifact)
@@ -96,12 +103,22 @@ class GeneticImageArtifact(Artifact):
             population[:] = offspring
 
     @staticmethod
-    def create(generations, agent, toolbox, pset):
-        population = GeneticImageArtifact.create_population(pset)
-        toolbox.register("evaluate", GeneticImageArtifact.evaluate, agent=agent)
+    def create(generations, agent, toolbox, pset, pop_size, shape):
+        population =[]
+
+        if len(agent.stmem.artifacts) > 0:
+            mem_size = min(pop_size, len(agent.stmem.artifacts))
+            mem_arts = np.random.choice(agent.stmem.artifacts, size=mem_size, replace=False)
+            for art in mem_arts:
+                population.append(art.function_tree)
+
+        if len(population) < pop_size:
+            filler = GeneticImageArtifact.create_population(pset, pop_size - len(population))
+            population += filler
+
+        toolbox.register("evaluate", GeneticImageArtifact.evaluate, agent=agent, shape=shape)
         GeneticImageArtifact.evolve_population(population, generations, toolbox)
         best = tools.selBest(population, 1)[0]
-
         return best
 
     @staticmethod
@@ -119,13 +136,7 @@ class GeneticImageArtifact(Artifact):
 
     @staticmethod
     def invent(n, agent, create_kwargs):
-        # pop_size = 10
-        # if len(agent.stmem.artifacts) < pop_size:
-        #     pop_size = len(agent.stmem.artifacts)
-        # mem_arts = np.random.choice(agent.stmem.artifacts, size=pop_size, replace=False)
-        # population = []
-        # for art in mem_arts:
-        #     population.append(art.function_tree)
         function_tree = GeneticImageArtifact.create(n, agent, **create_kwargs)
         artifact = GeneticImageArtifact(agent, function_tree.image, function_tree)
+        artifact.add_eval(agent, function_tree.fitness.values[0])
         return artifact

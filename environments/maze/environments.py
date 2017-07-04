@@ -2,6 +2,7 @@ from creamas.mp import MultiEnvironment
 from creamas.vote import VoteOrganizer, vote_mean
 from creamas.util import run
 import mazes.maze_solver as ms
+from utilities.misc import agent_name_parse
 
 import aiomas
 from matplotlib import pyplot as plt
@@ -191,9 +192,7 @@ class GatekeeperMazeMultiEnvironment(StatEnvironment):
             if agent not in self.gatekeepers:
                 id = 0
                 name = run(agent.get_name())
-                parsed_name = name.replace('://', '_')
-                parsed_name = parsed_name.replace(':', '_')
-                parsed_name = parsed_name.replace('/', '_')
+                parsed_name = agent_name_parse(name)
                 agent_folder = folder + '/' + parsed_name
 
                 if os.path.exists(agent_folder):

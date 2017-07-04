@@ -227,8 +227,8 @@ if __name__ == '__main__':
     # while True:
     #     ind = toolbox.individual()
     #     print(evaluate(ind))
-    #     img = generate_image(ind, 128, 128)
-    #     plt.imshow(img, cmap='rainbow')
+    #     img = generate_image(ind, 32, 32)
+    #     plt.imshow(img, cmap='gray')
     #     plt.show()
     #     edges = get_edges(img)
     #     print(box_count(edges))
