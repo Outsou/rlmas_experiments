@@ -8,7 +8,7 @@ from utilities.serializers import get_primitive_ser, get_terminal_ser, \
     get_primitive_set_ser, get_func_ser, get_toolbox_ser, get_type_ser, get_rule_leaf_ser
 from utilities.math import box_count
 from artifacts.genetic_image_artifact import GeneticImageArtifact
-from artifacts.features import ImageComplexityFeature
+import artifacts.features as ft
 
 from deap import base
 from deap import tools
@@ -94,8 +94,8 @@ def create_environment():
 if __name__ == "__main__":
 
     # Parameters
-    critic_threshold = 0.5
-    veto_threshold = 0.5
+    critic_threshold = 0.00001
+    veto_threshold = 0.00001
 
     pset = create_pset()
     shape = (32, 32)
@@ -104,9 +104,12 @@ if __name__ == "__main__":
                      'pop_size': 10,
                      'shape': shape}
 
+    # Make the rules
+
     rules = []
+    rules.append((RuleLeaf(ft.NoveltyFeature(), LinearMapper(0, 32, '01')), 1.))
     box_count_max = box_count(np.ones(shape))
-    rules.append((RuleLeaf(ImageComplexityFeature(), LinearMapper(0, box_count_max, '01')), 1.))
+    rules.append((RuleLeaf(ft.ImageComplexityFeature(), LinearMapper(0, box_count_max, '01')), 1.))
 
     memsize = 1000
 
@@ -134,7 +137,7 @@ if __name__ == "__main__":
         print(ret)
 
     sim = Simulation(menv, log_folder=log_folder)
-    sim.async_steps(2)
+    sim.async_steps(100)
     menv.save_artifacts(save_folder)
     sim.end()
 

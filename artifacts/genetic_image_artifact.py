@@ -21,13 +21,9 @@ class GeneticImageArtifact(Artifact):
         return self._pset
 
     @staticmethod
-    def max_distance_kwargs(create_kwargs):
+    def max_distance(create_kwargs):
         shape = create_kwargs['shape']
-        return np.sqrt(shape[0])
-
-    @staticmethod
-    def max_distance_artifact(artifact):
-        return np.sqrt(artifact.obj.shape[0])
+        return np.sqrt(np.sum(np.square(np.ones(shape))))
 
     @staticmethod
     def distance(artifact1, artifact2):

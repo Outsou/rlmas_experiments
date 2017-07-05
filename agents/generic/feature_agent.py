@@ -1,10 +1,9 @@
 from creamas.rules.agent import RuleAgent
 from creamas.math import gaus_pdf
-from creamas.mappers import LinearMapper
-from creamas.rules import RuleLeaf
-from artifacts.features import NoveltyFeature
+from artifacts.features import AgentAttacher
 from rl.bandit_learner import BanditLearner
 
+import inspect
 import logging
 import aiomas
 import numpy as np
@@ -19,7 +18,8 @@ class FeatureAgent(RuleAgent):
         super().__init__(environment, log_folder=log_folder,
                          log_level=log_level)
 
-        self.stmem = STMemory(artifact_cls=artifact_cls, length=memsize, max_length=memsize)
+        max_distance = artifact_cls.max_distance(create_kwargs)
+        self.stmem = STMemory(artifact_cls=artifact_cls, length=memsize, max_length=memsize, max_distance=max_distance)
         self.artifact_cls = artifact_cls
         self._own_threshold = critic_threshold
         self._novelty_threshold = veto_threshold
@@ -37,10 +37,9 @@ class FeatureAgent(RuleAgent):
         self.artifacts_created = 0
         self.passed_self_criticism_count = 0
 
-        novelty_rule = RuleLeaf(NoveltyFeature(self),
-                                LinearMapper(0, artifact_cls.max_distance_kwargs(self.create_kwargs), '01'))
-        self.add_rule(novelty_rule, 1.)
         for rule in rules:
+            if AgentAttacher in type(rule[0].feat).__bases__:
+                rule[0].feat.attach_agent(self)
             self.add_rule(rule[0], rule[1])
 
     def novelty(self, artifact):
@@ -163,11 +162,12 @@ class STMemory:
 
     '''Agent's short-term memory model using a simple list which stores
     artifacts as is.'''
-    def __init__(self, artifact_cls, length, max_length = 100):
+    def __init__(self, artifact_cls, length, max_distance, max_length = 100):
         self.length = length
         self.artifacts = []
         self.max_length = max_length
         self.artifact_cls = artifact_cls
+        self.max_distance = max_distance
 
     def _add_artifact(self, artifact):
         if len(self.artifacts) >= 2 * self.max_length:
@@ -187,14 +187,14 @@ class STMemory:
 
     def distance(self, artifact):
         limit = self.get_comparison_amount()
-        mdist = self.artifact_cls.max_distance_artifact(artifact)
         if limit == 0:
-            return np.random.random() * mdist
+            return np.random.random() * self.max_distance
+        min_distance = self.max_distance
         for a in self.artifacts[:limit]:
             d = self.artifact_cls.distance(artifact, a)
-            if d < mdist:
-                mdist = d
-        return mdist
+            if d < min_distance:
+                min_distance = d
+        return min_distance
 
     def get_comparison_amount(self):
         if len(self.artifacts) < self.length:
