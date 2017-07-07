@@ -1,9 +1,7 @@
 from creamas.rules.agent import RuleAgent
 from creamas.math import gaus_pdf
-from artifacts.features import AgentAttacher
 from rl.bandit_learner import BanditLearner
 
-import inspect
 import logging
 import aiomas
 import numpy as np
@@ -38,8 +36,6 @@ class FeatureAgent(RuleAgent):
         self.passed_self_criticism_count = 0
 
         for rule in rules:
-            if AgentAttacher in type(rule[0].feat).__bases__:
-                rule[0].feat.attach_agent(self)
             self.add_rule(rule[0], rule[1])
 
     def novelty(self, artifact):
@@ -128,6 +124,15 @@ class FeatureAgent(RuleAgent):
         self._log(logging.INFO, 'Created artifact with value {}'.format(val))
         self.add_artifact(artifact)
 
+        # print(val)
+        # plt.imshow(artifact.obj)
+        # plt.show()
+        # import cv2
+        # grayscale = cv2.cvtColor(artifact.obj, cv2.COLOR_RGB2GRAY)
+        # edges = cv2.Canny(grayscale, 100, 200)
+        # plt.imshow(edges, cmap='gray')
+        # plt.show()
+
         if val >= self._own_threshold:
             artifact.self_criticism = 'pass'
             self.passed_self_criticism_count += 1
@@ -153,7 +158,7 @@ class FeatureAgent(RuleAgent):
         i = 0
         for art in reversed(self.stmem.artifacts[:self.stmem.length]):
             i += 1
-            plt.imshow(art.obj, cmap='gray', shape=art.obj.shape)
+            plt.imshow(art.obj, shape=art.obj.shape)
             plt.title('Eval: {}'.format(art.evals[self.name]))
             plt.savefig('{}/artifact{}'.format(folder, i))
 

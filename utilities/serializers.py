@@ -3,9 +3,7 @@ from creamas.examples.spiro.spiro_agent_mp import SpiroArtifact as SpiroArtifact
 from creamas.rules import RuleLeaf
 from artifacts.spr_artifact import SpiroArtifact as SpiroArtifactOwn
 from artifacts.maze_artifact import MazeArtifact
-from deap.gp import Primitive
-from deap.gp import Terminal
-from deap.gp import PrimitiveSet
+from deap.gp import Primitive, Terminal, PrimitiveSet, PrimitiveSetTyped
 from deap.base import Toolbox
 
 import pickle
@@ -42,6 +40,9 @@ def get_terminal_ser():
 
 def get_primitive_set_ser():
     return PrimitiveSet, pickle.dumps, pickle.loads
+
+def get_primitive_set_typed_ser():
+    return PrimitiveSetTyped, pickle.dumps, pickle.loads
 
 def get_toolbox_ser():
     return Toolbox, pickle.dumps, pickle.loads

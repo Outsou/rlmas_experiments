@@ -58,6 +58,26 @@ if __name__ == '__main__':
 
         return image
 
+    def generate_color_image(individual, width, height):
+        func = gp.compile(individual, individual.pset)
+        image = np.zeros((width, height, 3))
+
+        coords = [(x, y) for x in range(width) for y in range(height)]
+        for coord in coords:
+            x = coord[0]
+            y = coord[1]
+            x_normalized = x / width - 0.5
+            y_normalized = y / height - 0.5
+            color_value = np.around(np.abs(func(x_normalized, y_normalized)) * 255)
+            for i in range(3):
+                if color_value[i] > 255:
+                    image[x, y, i] = 255
+                else:
+                    image[x, y, i] = color_value[i]
+
+        return np.uint8(image)
+
+
     def evaluate(individual):
         image = generate_image(individual, 32, 32)
         # image_ = image / 255
@@ -131,27 +151,40 @@ if __name__ == '__main__':
         edges = cv2.Canny(img_uint8, 100, 200)
         return edges
 
-    pset = gp.PrimitiveSet("MAIN", arity=2)
-    pset.addPrimitive(operator.add, 2)
-    pset.addPrimitive(operator.sub, 2)
-    pset.addPrimitive(operator.mul, 2)
-    # pset.addPrimitive(max, 2)
-    # pset.addPrimitive(min, 2)
-    # pset.addPrimitive(divide, 2)
-    pset.addPrimitive(np.sin, 1)
-    pset.addPrimitive(np.cos, 1)
-    pset.addPrimitive(np.tan, 1)
-    #pset.addPrimitive(np.arcsin, 1)
-    #pset.addPrimitive(np.arccos, 1)
-    #pset.addPrimitive(np.arctan, 1)
-    pset.addPrimitive(exp, 1)
-    #pset.addPrimitive(np.sqrt, 1)
-    pset.addPrimitive(log, 1)
-    pset.addEphemeralConstant('rand', lambda: np.random.randint(1, 4))
+    # pset = gp.PrimitiveSet("MAIN", arity=2)
+    # pset.addPrimitive(operator.add, 2)
+    # pset.addPrimitive(operator.sub, 2)
+    # pset.addPrimitive(operator.mul, 2)
+    # # pset.addPrimitive(max, 2)
+    # # pset.addPrimitive(min, 2)
+    # # pset.addPrimitive(divide, 2)
+    # pset.addPrimitive(np.sin, 1)
+    # pset.addPrimitive(np.cos, 1)
+    # pset.addPrimitive(np.tan, 1)
+    # #pset.addPrimitive(np.arcsin, 1)
+    # #pset.addPrimitive(np.arccos, 1)
+    # #pset.addPrimitive(np.arctan, 1)
+    # pset.addPrimitive(exp, 1)
+    # #pset.addPrimitive(np.sqrt, 1)
+    # pset.addPrimitive(log, 1)
+    # pset.addEphemeralConstant('rand', lambda: np.random.randint(1, 4))
+
+    def combine(num1, num2, num3):
+        return [num1, num2, num3]
+
+    pset = gp.PrimitiveSetTyped("main", [float, float], list)
+    pset.addPrimitive(combine, [float, float, float], list)
+    pset.addPrimitive(operator.mul, [float, float], float)
+    pset.addPrimitive(operator.add, [float, float], float)
+    pset.addPrimitive(operator.sub, [float, float], float)
+    pset.addPrimitive(np.sin, [float], float)
+    pset.addPrimitive(np.cos, [float], float)
+    pset.addPrimitive(np.tan, [float], float)
+    pset.addPrimitive(exp, [float], float)
+    pset.addPrimitive(log, [float], float)
 
     pset.renameArguments(ARG0="x")
     pset.renameArguments(ARG1="y")
-
 
     creator.create("FitnessMax", base.Fitness, weights=(1.0,))
     creator.create("Individual", gp.PrimitiveTree, fitness=creator.FitnessMax,
@@ -168,11 +201,23 @@ if __name__ == '__main__':
     toolbox.register("select", tools.selDoubleTournament, fitness_size=3, parsimony_size=1.4, fitness_first=True)
     toolbox.register("evaluate", evaluate)
 
-    # tree = toolbox.individual()
-    # img = generate_image(tree, 32, 32)
-    # plt.imshow(img)
+    # # Plot tree
+    #
+    # expr = toolbox.individual()
+    # nodes, edges, labels = gp.graph(expr)
+    #
+    # import matplotlib.pyplot as plt
+    # import networkx as nx
+    #
+    # g = nx.Graph()
+    # g.add_nodes_from(nodes)
+    # g.add_edges_from(edges)
+    # pos = nx.nx_pydot.graphviz_layout(g, prog="dot")
+    #
+    # nx.draw_networkx_nodes(g, pos)
+    # nx.draw_networkx_edges(g, pos)
+    # nx.draw_networkx_labels(g, pos, labels)
     # plt.show()
-    #print(evaluate(tree))
 
     def evolve_population(pop, NGEN):
         CXPB, MUTPB = 0.5, 0.2
@@ -210,29 +255,29 @@ if __name__ == '__main__':
             pop[:] = offspring
 
         return pop
+    #
+    # pop = toolbox.population(n=50)
+    #
+    # pop = evolve_population(pop, 50)
+    #
+    # best = tools.selBest(pop, 1)[0]
+    # eval = evaluate(best)
+    # print(eval)
+    # img = generate_image(best, 128, 128)
+    # plt.imshow(img, cmap='gray')
+    # plt.show()
+    # plt.imshow(get_edges(img), cmap='gray')
+    # plt.show()
 
-    pop = toolbox.population(n=50)
-
-    pop = evolve_population(pop, 50)
-
-    best = tools.selBest(pop, 1)[0]
-    eval = evaluate(best)
-    print(eval)
-    img = generate_image(best, 128, 128)
-    plt.imshow(img, cmap='gray')
-    plt.show()
-    plt.imshow(get_edges(img), cmap='gray')
-    plt.show()
-
-    # while True:
-    #     ind = toolbox.individual()
-    #     print(evaluate(ind))
-    #     img = generate_image(ind, 32, 32)
-    #     plt.imshow(img, cmap='gray')
-    #     plt.show()
-    #     edges = get_edges(img)
-    #     print(box_count(edges))
-    #     plt.imshow(edges, cmap='gray')
-    #     plt.show()
-    #     print('...')
+    while True:
+        ind = toolbox.individual()
+        # print(evaluate(ind))
+        img = generate_color_image(ind, 32, 32)
+        plt.imshow(img)
+        plt.show()
+        # edges = get_edges(img)
+        # print(box_count(edges))
+        # plt.imshow(edges, cmap='gray')
+        # plt.show()
+        print('...')
 

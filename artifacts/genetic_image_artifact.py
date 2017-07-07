@@ -34,7 +34,7 @@ class GeneticImageArtifact(Artifact):
         width = shape[0]
         height = shape[1]
         func = gp.compile(individual, individual.pset)
-        image = np.zeros((width, height))
+        image = np.zeros((width, height, 3))
 
         coords = [(x, y) for x in range(width) for y in range(height)]
         for coord in coords:
@@ -42,15 +42,14 @@ class GeneticImageArtifact(Artifact):
             y = coord[1]
             x_normalized = x / width - 0.5
             y_normalized = y / height - 0.5
-            color_value = np.abs(func(x_normalized, y_normalized))
-            image[x, y] = color_value
+            color_value = np.around(np.abs(func(x_normalized, y_normalized)) * 255)
+            for i in range(3):
+                if color_value[i] > 255:
+                    image[x, y, i] = 255
+                else:
+                    image[x, y, i] = color_value[i]
 
-            if image[x, y] < 0:
-                image[x, y] = 0
-            elif image[x, y] > 1:
-                image[x, y] = 1
-
-        return image
+        return np.uint8(image)
 
     @staticmethod
     def evaluate(individual, agent, shape):

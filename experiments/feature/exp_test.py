@@ -5,10 +5,10 @@ from creamas.util import run
 from creamas.rules.rule import RuleLeaf
 from creamas.mappers import LinearMapper
 from utilities.serializers import get_primitive_ser, get_terminal_ser, \
-    get_primitive_set_ser, get_func_ser, get_toolbox_ser, get_type_ser, get_rule_leaf_ser
+    get_primitive_set_typed_ser, get_func_ser, get_toolbox_ser, get_type_ser, get_rule_leaf_ser
 from utilities.math import box_count
 from artifacts.genetic_image_artifact import GeneticImageArtifact
-import artifacts.features as ft
+import creamas.features as ft
 
 from deap import base
 from deap import tools
@@ -22,24 +22,32 @@ import os
 import shutil
 
 
+def combine(num1, num2, num3):
+    return [num1, num2, num3]
+
+def log(a):
+    if a <= 0:
+        a = 0.000001
+    return np.log(a)
+
+def exp(a):
+    if a > 100:
+        a = 100
+    elif a < -100:
+        a = -100
+    return np.exp(a)
+
 def create_pset():
-    pset = gp.PrimitiveSet("MAIN", arity=2)
-    pset.addPrimitive(operator.add, 2)
-    pset.addPrimitive(operator.sub, 2)
-    pset.addPrimitive(operator.mul, 2)
-    # pset.addPrimitive(max, 2)
-    # pset.addPrimitive(min, 2)
-    # pset.addPrimitive(divide, 2)
-    pset.addPrimitive(np.sin, 1)
-    pset.addPrimitive(np.cos, 1)
-    pset.addPrimitive(np.tan, 1)
-    #pset.addPrimitive(np.arcsin, 1)
-    #pset.addPrimitive(np.arccos, 1)
-    #pset.addPrimitive(np.arctan, 1)
-    # pset.addPrimitive(exp, 1)
-    #pset.addPrimitive(np.sqrt, 1)
-    # pset.addPrimitive(log, 1)
-    # pset.addEphemeralConstant('rand', lambda: np.random.randint(1, 4))
+    pset = gp.PrimitiveSetTyped("main", [float, float], list)
+    pset.addPrimitive(combine, [float, float, float], list)
+    pset.addPrimitive(operator.mul, [float, float], float)
+    pset.addPrimitive(operator.add, [float, float], float)
+    pset.addPrimitive(operator.sub, [float, float], float)
+    pset.addPrimitive(np.sin, [float], float)
+    pset.addPrimitive(np.cos, [float], float)
+    pset.addPrimitive(np.tan, [float], float)
+    pset.addPrimitive(exp, [float], float)
+    pset.addPrimitive(log, [float], float)
 
     pset.renameArguments(ARG0="x")
     pset.renameArguments(ARG1="y")
@@ -65,10 +73,10 @@ def create_environment():
              ]
 
     env_kwargs = {'extra_serializers': [get_type_ser, get_primitive_ser, get_terminal_ser,
-                                        get_primitive_set_ser, get_func_ser, get_toolbox_ser,
+                                        get_primitive_set_typed_ser, get_func_ser, get_toolbox_ser,
                                         get_rule_leaf_ser], 'codec': aiomas.MsgPack}
     slave_kwargs = [{'extra_serializers': [get_type_ser, get_primitive_ser, get_terminal_ser,
-                                           get_primitive_set_ser, get_func_ser, get_toolbox_ser,
+                                           get_primitive_set_typed_ser, get_func_ser, get_toolbox_ser,
                                            get_rule_leaf_ser], 'codec': aiomas.MsgPack} for _ in range(len(addrs))]
 
     menv = StatEnvironment(addr,
@@ -107,7 +115,6 @@ if __name__ == "__main__":
     # Make the rules
 
     rules = []
-    rules.append((RuleLeaf(ft.NoveltyFeature(), LinearMapper(0, 32, '01')), 1.))
     box_count_max = box_count(np.ones(shape))
     rules.append((RuleLeaf(ft.ImageComplexityFeature(), LinearMapper(0, box_count_max, '01')), 1.))
 
