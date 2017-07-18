@@ -3,6 +3,7 @@ from creamas.examples.spiro.spiro_agent_mp import SpiroArtifact as SpiroArtifact
 from creamas.rules import RuleLeaf
 from artifacts.spr_artifact import SpiroArtifact as SpiroArtifactOwn
 from artifacts.maze_artifact import MazeArtifact
+from artifacts.genetic_image_artifact import GeneticImageArtifact
 from deap.gp import Primitive, Terminal, PrimitiveSet, PrimitiveSetTyped
 from deap.base import Toolbox
 
@@ -52,3 +53,6 @@ def get_type_ser():
 
 def get_rule_leaf_ser():
     return RuleLeaf, pickle.dumps, pickle.loads
+
+def get_genetic_image_artifact_ser():
+    return GeneticImageArtifact, pickle.dumps, pickle.loads

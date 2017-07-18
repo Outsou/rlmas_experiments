@@ -30,6 +30,7 @@ class FeatureAgent(RuleAgent):
 
         self.bandit_learner = None
         self.connection_counts = None
+        self.connection_list = []
 
         self.comparison_count = 0
         self.artifacts_created = 0
@@ -48,6 +49,7 @@ class FeatureAgent(RuleAgent):
         pdf = gaus_pdf(value, desired_value, self.hedonic_std)
         return pdf / lmax
 
+    @aiomas.expose
     def evaluate(self, artifact):
         if self.name in artifact.evals:
             return artifact.evals[self.name], None
@@ -59,7 +61,7 @@ class FeatureAgent(RuleAgent):
         return evaluation, None
 
     def invent(self, n):
-        best_artifact = self.artifact_cls.invent(self.search_width, self, self.create_kwargs)
+        best_artifact, _ = self.artifact_cls.invent(self.search_width, self, self.create_kwargs)
         return best_artifact
 
     def learn(self, artifact, iterations=1):
@@ -73,9 +75,6 @@ class FeatureAgent(RuleAgent):
     @aiomas.expose
     def add_connections(self, conns):
         rets = super().add_connections(conns)
-        self.gatekeepers = list(self._connections.keys())
-        length = len(self.gatekeepers)
-        self.bandit_learner = BanditLearner(length)
 
         self.connection_counts = {}
         for conn in conns:
@@ -119,39 +118,7 @@ class FeatureAgent(RuleAgent):
 
     @aiomas.expose
     async def act(self):
-        artifact = self.invent(self.search_width)
-        val = artifact.evals[self.name]
-        self._log(logging.INFO, 'Created artifact with value {}'.format(val))
-        self.add_artifact(artifact)
-
-        # print(val)
-        # plt.imshow(artifact.obj)
-        # plt.show()
-        # import cv2
-        # grayscale = cv2.cvtColor(artifact.obj, cv2.COLOR_RGB2GRAY)
-        # edges = cv2.Canny(grayscale, 100, 200)
-        # plt.imshow(edges, cmap='gray')
-        # plt.show()
-
-        if val >= self._own_threshold:
-            artifact.self_criticism = 'pass'
-            self.passed_self_criticism_count += 1
-            self.learn(artifact)
-
-            if self.bandit_learner is None:
-                return
-
-            bandit = self.bandit_learner.choose_bandit(rand=self.ask_random)
-            critic = self.gatekeepers[bandit]
-            self.connection_counts[critic] += 1
-
-            connection = await self.env.connect(critic)
-            passed, artifact = await connection.get_criticism(artifact)
-
-            if passed:
-                self.bandit_learner.give_reward(bandit, 1)
-            else:
-                self.bandit_learner.give_reward(bandit, -1)
+        raise NotImplementedError('Override in subclass.')
 
     @aiomas.expose
     def save_artifacts(self, folder):

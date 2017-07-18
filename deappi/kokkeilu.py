@@ -12,6 +12,8 @@ if __name__ == '__main__':
     from deap import gp
     from deap import tools
 
+    from creamas.features import *
+
     np.seterr(all='raise')
 
     # Make the tree
@@ -79,14 +81,14 @@ if __name__ == '__main__':
 
 
     def evaluate(individual):
-        image = generate_image(individual, 32, 32)
+        image = generate_color_image(individual, 32, 32)
         # image_ = image / 255
         # my_cmap = plt.cm.get_cmap('rainbow')
         # color_array = my_cmap(image_)
         # evaluation = np.sum(color_array[:, :, 1])
 
-        edges = get_edges(image)
-        evaluation = box_count(edges)
+        # edges = get_edges(image)
+        # evaluation = box_count(edges)
         # evaluation = -abs(1.8 - evaluation)
 
         # evaluation = 0
@@ -94,6 +96,19 @@ if __name__ == '__main__':
         #     for j in range(32):
         #         if image[i, j] > 0 and image[i, j] < 255:
         #             evaluation += 1
+
+        class DummyArt():
+            def __init__(self, obj, domain):
+                self.obj = obj
+                self.domain = domain
+
+        art = DummyArt(image, 'image')
+
+        feature1 = ImageRednessFeature()
+        feature2 = ImageIntensityFeature()
+        feature3 = ImageComplexityFeature()
+
+        evaluation = feature1(art) + feature2(art) * 0.5 + feature3(art)
 
         return evaluation,
 
@@ -255,29 +270,29 @@ if __name__ == '__main__':
             pop[:] = offspring
 
         return pop
-    #
-    # pop = toolbox.population(n=50)
-    #
-    # pop = evolve_population(pop, 50)
-    #
-    # best = tools.selBest(pop, 1)[0]
-    # eval = evaluate(best)
-    # print(eval)
-    # img = generate_image(best, 128, 128)
-    # plt.imshow(img, cmap='gray')
-    # plt.show()
+
+    pop = toolbox.population(n=50)
+
+    pop = evolve_population(pop, 50)
+
+    best = tools.selBest(pop, 1)[0]
+    eval = evaluate(best)
+    print(eval)
+    img = generate_color_image(best, 128, 128)
+    plt.imshow(img)
+    plt.show()
     # plt.imshow(get_edges(img), cmap='gray')
     # plt.show()
 
-    while True:
-        ind = toolbox.individual()
-        # print(evaluate(ind))
-        img = generate_color_image(ind, 32, 32)
-        plt.imshow(img)
-        plt.show()
-        # edges = get_edges(img)
-        # print(box_count(edges))
-        # plt.imshow(edges, cmap='gray')
-        # plt.show()
-        print('...')
+    # while True:
+    #     ind = toolbox.individual()
+    #     # print(evaluate(ind))
+    #     img = generate_color_image(ind, 32, 32)
+    #     plt.imshow(img)
+    #     plt.show()
+    #     # edges = get_edges(img)
+    #     # print(box_count(edges))
+    #     # plt.imshow(edges, cmap='gray')
+    #     # plt.show()
+    #     print('...')
 

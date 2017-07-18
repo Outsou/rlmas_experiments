@@ -10,15 +10,7 @@ import deap.gp as gp
 class GeneticImageArtifact(Artifact):
     def __init__(self, creator, obj, function_tree):
         super().__init__(creator, obj, domain='image')
-        self._function_tree = function_tree
-
-    @property
-    def function_tree(self):
-        return self._function_tree
-
-    @property
-    def pset(self):
-        return self._pset
+        self.framings['function_tree'] = function_tree
 
     @staticmethod
     def max_distance(create_kwargs):
@@ -101,15 +93,24 @@ class GeneticImageArtifact(Artifact):
     def create(generations, agent, toolbox, pset, pop_size, shape):
         population =[]
 
+        creator.create("FitnessMax", base.Fitness, weights=(1.0,))
+        creator.create("Individual", gp.PrimitiveTree, fitness=creator.FitnessMax,
+                       pset=pset, image=None)
+
         if len(agent.stmem.artifacts) > 0:
             mem_size = min(pop_size, len(agent.stmem.artifacts))
             mem_arts = np.random.choice(agent.stmem.artifacts, size=mem_size, replace=False)
             for art in mem_arts:
-                population.append(art.function_tree)
+                individual = creator.Individual(art.framings['function_tree'])
+                population.append(individual)
 
         if len(population) < pop_size:
-            filler = GeneticImageArtifact.create_population(pset, pop_size - len(population))
-            population += filler
+            pop_toolbox = base.Toolbox()
+            pop_toolbox.register("expr", gp.genHalfAndHalf, pset=pset, min_=2, max_=3)
+            pop_toolbox.register("individual", tools.initIterate, creator.Individual,
+                                        pop_toolbox.expr)
+            pop_toolbox.register("population", tools.initRepeat, list, pop_toolbox.individual)
+            population += pop_toolbox.population(pop_size - len(population))
 
         toolbox.register("evaluate", GeneticImageArtifact.evaluate, agent=agent, shape=shape)
         GeneticImageArtifact.evolve_population(population, generations, toolbox)
@@ -117,21 +118,8 @@ class GeneticImageArtifact(Artifact):
         return best
 
     @staticmethod
-    def create_population(pset, size=10):
-        creator.create("FitnessMax", base.Fitness, weights=(1.0,))
-        creator.create("Individual", gp.PrimitiveTree, fitness=creator.FitnessMax,
-                       pset=pset, image=None)
-
-        toolbox = base.Toolbox()
-        toolbox.register("expr", gp.genHalfAndHalf, pset=pset, min_=2, max_=3)
-        toolbox.register("individual", tools.initIterate, creator.Individual,
-                         toolbox.expr)
-        toolbox.register("population", tools.initRepeat, list, toolbox.individual)
-        return toolbox.population(size)
-
-    @staticmethod
     def invent(n, agent, create_kwargs):
         function_tree = GeneticImageArtifact.create(n, agent, **create_kwargs)
-        artifact = GeneticImageArtifact(agent, function_tree.image, function_tree)
+        artifact = GeneticImageArtifact(agent, function_tree.image, list(function_tree))
         artifact.add_eval(agent, function_tree.fitness.values[0])
-        return artifact
+        return artifact, None
