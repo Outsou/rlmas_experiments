@@ -20,10 +20,12 @@ import aiomas
 def combine(num1, num2, num3):
     return [num1, num2, num3]
 
+
 def log(a):
     if a <= 0:
         a = 0.000001
     return np.log(a)
+
 
 def exp(a):
     if a > 100:
@@ -31,6 +33,7 @@ def exp(a):
     elif a < -100:
         a = -100
     return np.exp(a)
+
 
 def create_pset():
     pset = gp.PrimitiveSetTyped("main", [float, float], list)
@@ -48,12 +51,20 @@ def create_pset():
     pset.renameArguments(ARG1="y")
     return pset
 
+
+def mutate(individual, pset):
+    if np.random.random() < 0.5:
+        return gp.mutShrink(individual)
+    return gp.mutInsert(individual, pset)
+
+
 def create_toolbox():
     toolbox = base.Toolbox()
     toolbox.register("mate", gp.cxOnePoint)
-    toolbox.register("mutate", gp.mutShrink)
+    toolbox.register("mutate", mutate)
     toolbox.register("select", tools.selDoubleTournament, fitness_size=3, parsimony_size=1.4, fitness_first=True)
     return toolbox
+
 
 def create_environment():
     addr = ('localhost', 5550)
@@ -90,6 +101,7 @@ def create_environment():
     ret = run(menv.is_ready())
 
     return menv
+
 
 def get_rules(img_shape):
     rules = {}

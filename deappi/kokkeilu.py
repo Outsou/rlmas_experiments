@@ -61,7 +61,10 @@ if __name__ == '__main__':
         return image
 
     def generate_color_image(individual, width, height):
-        func = gp.compile(individual, individual.pset)
+        try:
+            func = gp.compile(individual, individual.pset)
+        except MemoryError:
+            print('fak')
         image = np.zeros((width, height, 3))
 
         coords = [(x, y) for x in range(width) for y in range(height)]
@@ -124,37 +127,6 @@ if __name__ == '__main__':
         nx.draw_networkx_edges(g, pos)
         nx.draw_networkx_labels(g, pos, labels)
         plt.show()
-
-
-    def box_count(image):
-        pixels = []
-        for i in range(image.shape[0]):
-            for j in range(image.shape[1]):
-                if image[i, j] > 0:
-                    pixels.append((i, j))
-        lx = image.shape[1]
-        ly = image.shape[0]
-        pixels = pl.array(pixels)
-        if len(pixels) < 2:
-            return 0
-        scales = np.logspace(1, 4, num=20, endpoint=False, base=2)
-        Ns = []
-        for scale in scales:
-            # print('Scale: ' + str(scale))
-            H, edges = np.histogramdd(pixels, bins=(np.arange(0, lx, scale), np.arange(0, ly, scale)))
-            H_sum = np.sum(H > 0)
-            if H_sum == 0:
-                H_sum = 1
-            Ns.append(H_sum)
-
-        coeffs = np.polyfit(np.log(scales), np.log(Ns), 1)
-        # asd = zip(scales, Ns)
-        # for thing in asd:
-        #     print(thing)
-        hausdorff_dim = -coeffs[0]
-        # print('The Hausdorff dimension is: ' + str(hausdorff_dim))
-        return hausdorff_dim
-
 
     def show_individual(individual):
         img = generate_image(individual, 32, 32)
@@ -235,7 +207,7 @@ if __name__ == '__main__':
     # plt.show()
 
     def evolve_population(pop, NGEN):
-        CXPB, MUTPB = 0.5, 0.2
+        CXPB, MUTPB = 0.5, 1
 
         # Evaluate the entire population
         fitnesses = map(toolbox.evaluate, pop)
@@ -273,7 +245,7 @@ if __name__ == '__main__':
 
     pop = toolbox.population(n=50)
 
-    pop = evolve_population(pop, 50)
+    pop = evolve_population(pop, 10000)
 
     best = tools.selBest(pop, 1)[0]
     eval = evaluate(best)

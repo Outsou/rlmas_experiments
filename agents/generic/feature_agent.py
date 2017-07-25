@@ -130,8 +130,8 @@ class FeatureAgent(RuleAgent):
         artifact = self.invent(self.search_width)
         eval, eval_values = self.evaluate(artifact)
         artifact.framings['eval_values'] = eval_values
-        self._log(logging.INFO, 'Created artifact with evaluation {} (value: {}, novelty: {})'
-                  .format(eval, eval_values['value'], eval_values['novelty']))
+        self._log(logging.INFO, 'Created artifact with evaluation {} (value: {}, novelty: {}) and tree size {}'
+                  .format(eval, eval_values['value'], eval_values['novelty'], len(artifact.framings['function_tree'])))
         self.add_artifact(artifact)
 
         if eval >= self._own_threshold:

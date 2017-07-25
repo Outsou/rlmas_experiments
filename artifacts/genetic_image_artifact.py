@@ -26,10 +26,9 @@ class GeneticImageArtifact(Artifact):
         return np.sqrt(np.sum(np.square(img1 - img2)))
 
     @staticmethod
-    def generate_image(individual, shape=(32,32)):
+    def generate_image(func, shape=(32, 32)):
         width = shape[0]
         height = shape[1]
-        func = gp.compile(individual, individual.pset)
         image = np.zeros((width, height, 3))
 
         coords = [(x, y) for x in range(width) for y in range(height)]
@@ -50,14 +49,19 @@ class GeneticImageArtifact(Artifact):
     @staticmethod
     def evaluate(individual, agent, shape):
         if individual.image is None:
-            image = GeneticImageArtifact.generate_image(individual, shape)
+            # If tree is too tall return negative evaluation
+            try:
+                func = gp.compile(individual, individual.pset)
+            except MemoryError:
+                return -1,
+            image = GeneticImageArtifact.generate_image(func, shape)
             individual.image = image
         artifact = GeneticImageArtifact(agent, individual.image, individual)
         evaluation, _ = agent.evaluate(artifact)
         return evaluation,
 
     @staticmethod
-    def evolve_population(population, generations, toolbox):
+    def evolve_population(population, generations, toolbox, pset):
         CXPB, MUTPB = 0.5, 0.2
 
         fitnesses = map(toolbox.evaluate, population)
@@ -81,8 +85,10 @@ class GeneticImageArtifact(Artifact):
 
             for mutant in offspring:
                 if np.random.random() < MUTPB:
-                    toolbox.mutate(mutant)
+                    toolbox.mutate(mutant, pset)
                     del mutant.fitness.values
+                    if mutant.image is not None:
+                        del mutant.image
 
             # Evaluate the individuals with an invalid fitness
             invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
@@ -95,7 +101,7 @@ class GeneticImageArtifact(Artifact):
 
     @staticmethod
     def create(generations, agent, toolbox, pset, pop_size, shape):
-        population =[]
+        population = []
 
         creator.create("FitnessMax", base.Fitness, weights=(1.0,))
         creator.create("Individual", gp.PrimitiveTree, fitness=creator.FitnessMax,
@@ -112,12 +118,12 @@ class GeneticImageArtifact(Artifact):
             pop_toolbox = base.Toolbox()
             pop_toolbox.register("expr", gp.genHalfAndHalf, pset=pset, min_=2, max_=3)
             pop_toolbox.register("individual", tools.initIterate, creator.Individual,
-                                        pop_toolbox.expr)
+                                 pop_toolbox.expr)
             pop_toolbox.register("population", tools.initRepeat, list, pop_toolbox.individual)
             population += pop_toolbox.population(pop_size - len(population))
 
         toolbox.register("evaluate", GeneticImageArtifact.evaluate, agent=agent, shape=shape)
-        GeneticImageArtifact.evolve_population(population, generations, toolbox)
+        GeneticImageArtifact.evolve_population(population, generations, toolbox, pset)
         best = tools.selBest(population, 1)[0]
         return best
 
