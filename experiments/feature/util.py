@@ -2,6 +2,9 @@ from creamas.core import Environment, Simulation
 from creamas.mp import MultiEnvManager, EnvManager
 from environments.generic import StatEnvironment
 from creamas.util import run
+from creamas.image import fractal_dimension
+from creamas.mappers import LinearMapper
+import creamas.features as ft
 from utilities.serializers import *
 
 from deap import base
@@ -87,3 +90,17 @@ def create_environment():
     ret = run(menv.is_ready())
 
     return menv
+
+def get_rules(img_shape):
+    rules = {}
+    red_rule = RuleLeaf(ft.ImageRednessFeature(), LinearMapper(0, 1, '01'))
+    rules['red'] = red_rule
+    green_rule = RuleLeaf(ft.ImageGreennessFeature(), LinearMapper(0, 1, '01'))
+    rules['green'] = green_rule
+    blue_rule = RuleLeaf(ft.ImageBluenessFeature(), LinearMapper(0, 1, '01'))
+    rules['blue'] = blue_rule
+    complexity_rule = RuleLeaf(ft.ImageComplexityFeature(), LinearMapper(0, fractal_dimension(np.ones(img_shape)), '01'))
+    rules['complexity'] = complexity_rule
+    intensity_rule = RuleLeaf(ft.ImageIntensityFeature(), LinearMapper(0, 1, '01'))
+    rules['intensity'] = intensity_rule
+    return rules

@@ -6,6 +6,8 @@ from deap import creator
 from deap import base
 import deap.gp as gp
 
+import cv2
+
 
 class GeneticImageArtifact(Artifact):
     def __init__(self, creator, obj, function_tree):
@@ -19,7 +21,9 @@ class GeneticImageArtifact(Artifact):
 
     @staticmethod
     def distance(artifact1, artifact2):
-        return np.sqrt(np.sum(np.square(artifact1.obj - artifact2.obj)))
+        img1 = cv2.cvtColor(artifact1.obj, cv2.COLOR_RGB2GRAY) / 255
+        img2 = cv2.cvtColor(artifact2.obj, cv2.COLOR_RGB2GRAY) / 255
+        return np.sqrt(np.sum(np.square(img1 - img2)))
 
     @staticmethod
     def generate_image(individual, shape=(32,32)):
@@ -121,5 +125,4 @@ class GeneticImageArtifact(Artifact):
     def invent(n, agent, create_kwargs):
         function_tree = GeneticImageArtifact.create(n, agent, **create_kwargs)
         artifact = GeneticImageArtifact(agent, function_tree.image, list(function_tree))
-        artifact.add_eval(agent, function_tree.fitness.values[0])
         return artifact, None

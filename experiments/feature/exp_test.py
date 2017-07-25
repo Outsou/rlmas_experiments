@@ -12,8 +12,10 @@ import shutil
 
 if __name__ == "__main__":
     # Parameters
-    critic_threshold = 0.00001
-    veto_threshold = 0.00001
+    critic_threshold = 0.2
+    veto_threshold = 0.2
+
+    novelty_weight = 0.85
 
     pset = create_pset()
 
@@ -25,11 +27,16 @@ if __name__ == "__main__":
 
     # Make the rules
 
-    rules = []
-    box_count_max = box_count(np.ones(shape))
-    rules.append((RuleLeaf(ft.ImageComplexityFeature(), LinearMapper(0, box_count_max, '01')), 1.))
+    rule_dict = get_rules(shape)
 
-    memsize = 1000
+    rules = []
+    rule_weights = []
+    # box_count_max = box_count(np.ones(shape))
+    # rules.append((RuleLeaf(ft.ImageComplexityFeature(), LinearMapper(0, box_count_max, '01')), 1.))
+    rules.append(rule_dict['red'])
+    rule_weights.append(1)
+
+    memsize = 100000
 
     # Environment and simulation
 
@@ -47,14 +54,17 @@ if __name__ == "__main__":
                                           artifact_cls=GeneticImageArtifact,
                                           create_kwargs=create_kwargs,
                                           rules=rules,
+                                          rule_weights=rule_weights,
                                           memsize=memsize,
                                           critic_threshold=critic_threshold,
-                                          veto_threshold=veto_threshold))
+                                          veto_threshold=veto_threshold,
+                                          novelty_weight=novelty_weight))
 
         print(ret)
 
     sim = Simulation(menv, log_folder=log_folder)
-    sim.async_steps(100)
-    menv.save_artifacts(save_folder)
+    while True:
+        sim.async_steps(1)
+    #menv.save_artifacts(save_folder)
     sim.end()
 

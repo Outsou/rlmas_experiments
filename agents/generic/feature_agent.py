@@ -9,10 +9,10 @@ from matplotlib import pyplot as plt
 
 
 class FeatureAgent(RuleAgent):
-    def __init__(self, environment, artifact_cls, create_kwargs, rules, desired_novelty=-1,
-                 ask_criticism=True, search_width=10, ask_random=False,
+    def __init__(self, environment, artifact_cls, create_kwargs, rules, rule_weights = None, desired_novelty=-1,
+                 novelty_weight=0.5, ask_criticism=True, search_width=10, ask_random=False,
                  critic_threshold=0.5, veto_threshold=0.5, log_folder=None,
-                 log_level=logging.INFO, memsize=100, hedonic_std=0.1):
+                 log_level=logging.INFO, memsize=0, hedonic_std=0.1):
         super().__init__(environment, log_folder=log_folder,
                          log_level=log_level)
 
@@ -27,8 +27,8 @@ class FeatureAgent(RuleAgent):
         self.desired_novelty = desired_novelty
         self.hedonic_std = hedonic_std
         self.create_kwargs = create_kwargs
+        self.novelty_weight = novelty_weight
 
-        self.bandit_learner = None
         self.connection_counts = None
         self.connection_list = []
 
@@ -36,8 +36,13 @@ class FeatureAgent(RuleAgent):
         self.artifacts_created = 0
         self.passed_self_criticism_count = 0
 
-        for rule in rules:
-            self.add_rule(rule[0], rule[1])
+        if rule_weights is None:
+            rule_weights = [1] * len(rules)
+        else:
+            assert len(rules) == len(rule_weights), "Different amount of rules and rule weights."
+
+        for i in range(len(rules)):
+            self.add_rule(rules[i], rule_weights[i])
 
     def novelty(self, artifact):
         self.comparison_count += self.stmem.get_comparison_amount()
@@ -52,13 +57,17 @@ class FeatureAgent(RuleAgent):
     @aiomas.expose
     def evaluate(self, artifact):
         if self.name in artifact.evals:
-            return artifact.evals[self.name], None
+            return artifact.evals[self.name], artifact.framings['eval_values']
 
-        evaluation, _ = super().evaluate(artifact)
+        value, _ = super().evaluate(artifact)
+        novelty = self.novelty(artifact)
+        evaluation = (1 - self.novelty_weight) * value + self.novelty_weight * novelty
 
         artifact.add_eval(self, evaluation)
+        eval_values = {'value': value, 'novelty': novelty}
+        artifact.framings['eval_values'] = eval_values
 
-        return evaluation, None
+        return evaluation, eval_values
 
     def invent(self, n):
         best_artifact, _ = self.artifact_cls.invent(self.search_width, self, self.create_kwargs)
@@ -118,7 +127,18 @@ class FeatureAgent(RuleAgent):
 
     @aiomas.expose
     async def act(self):
-        raise NotImplementedError('Override in subclass.')
+        artifact = self.invent(self.search_width)
+        eval, eval_values = self.evaluate(artifact)
+        artifact.framings['eval_values'] = eval_values
+        self._log(logging.INFO, 'Created artifact with evaluation {} (value: {}, novelty: {})'
+                  .format(eval, eval_values['value'], eval_values['novelty']))
+        self.add_artifact(artifact)
+
+        if eval >= self._own_threshold:
+            artifact.self_criticism = 'pass'
+            self.passed_self_criticism_count += 1
+            if self.stmem.length > 0 and eval_values['novelty'] > 0:
+                self.learn(artifact)
 
     @aiomas.expose
     def save_artifacts(self, folder):
@@ -160,13 +180,13 @@ class STMemory:
     def distance(self, artifact):
         limit = self.get_comparison_amount()
         if limit == 0:
-            return np.random.random() * self.max_distance
+            return np.random.random() * self.max_distance / self.max_distance
         min_distance = self.max_distance
         for a in self.artifacts[:limit]:
             d = self.artifact_cls.distance(artifact, a)
             if d < min_distance:
                 min_distance = d
-        return min_distance
+        return min_distance / self.max_distance
 
     def get_comparison_amount(self):
         if len(self.artifacts) < self.length:
