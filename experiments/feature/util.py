@@ -46,6 +46,7 @@ def create_pset():
     pset.addPrimitive(np.tan, [float], float)
     pset.addPrimitive(exp, [float], float)
     pset.addPrimitive(log, [float], float)
+    #pset.addEphemeralConstant('rand', lambda: np.around(np.random.random() * 255), float)
 
     pset.renameArguments(ARG0="x")
     pset.renameArguments(ARG1="y")

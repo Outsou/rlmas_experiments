@@ -63,8 +63,7 @@ if __name__ == "__main__":
         print(ret)
 
     sim = Simulation(menv, log_folder=log_folder)
-    while True:
-        sim.async_steps(1)
-    #menv.save_artifacts(save_folder)
+    sim.async_steps(100)
+    menv.save_artifacts(save_folder)
     sim.end()
 

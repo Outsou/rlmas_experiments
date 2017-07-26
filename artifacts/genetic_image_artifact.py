@@ -37,9 +37,11 @@ class GeneticImageArtifact(Artifact):
             y = coord[1]
             x_normalized = x / width - 0.5
             y_normalized = y / height - 0.5
-            color_value = np.around(np.abs(func(x_normalized, y_normalized)) * 255)
+            color_value = np.around(np.array(func(x_normalized, y_normalized)))
             for i in range(3):
-                if color_value[i] > 255:
+                if color_value[i] < 0:
+                    image[x, y, i] = 0
+                elif color_value[i] > 255:
                     image[x, y, i] = 255
                 else:
                     image[x, y, i] = color_value[i]
