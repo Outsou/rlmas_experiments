@@ -9,6 +9,7 @@ from deap.base import Toolbox
 
 import pickle
 from types import FunctionType
+from numpy import ndarray
 
 
 # def get_spiro_ser():
@@ -56,3 +57,6 @@ def get_rule_leaf_ser():
 
 def get_genetic_image_artifact_ser():
     return GeneticImageArtifact, pickle.dumps, pickle.loads
+
+def get_ndarray_ser():
+    return ndarray, pickle.dumps, pickle.loads
