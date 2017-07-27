@@ -7,7 +7,7 @@ import networkx as nx
 
 if __name__ == "__main__":
     # Parameters
-    num_of_agents = 5
+    num_of_agents = 12
 
     pset = create_pset()
 
@@ -49,6 +49,6 @@ if __name__ == "__main__":
     cnx.connections_from_graph(menv, G)
 
     sim = Simulation(menv, log_folder=log_folder)
-    sim.async_steps(100)
+    sim.async_steps(500)
     sim.end()
 

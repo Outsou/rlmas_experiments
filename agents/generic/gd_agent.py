@@ -10,7 +10,9 @@ class GDAgent(FeatureAgent):
         super().__init__(environment, *args, **kwargs)
         self.total_reward = 0
         self.max_reward = 0
-        self.random_reward = 0
+        self.expected_random_reward = 0
+        self.age = 0
+        self.chose_best = 0
 
     @aiomas.expose
     def evaluate(self, artifact):
@@ -56,6 +58,7 @@ class GDAgent(FeatureAgent):
             max_addr = max(estimates, key=estimates.get)
             return max_addr, estimates[max_addr]
 
+        self.age += 1
         artifact = self.invent(self.search_width)
         eval, values = self.evaluate(artifact)
         chosen_addr, estimate = choose_connection(values)
@@ -65,10 +68,15 @@ class GDAgent(FeatureAgent):
             opinion, _ = await self.ask_opinion(addr, artifact)
             opinions[addr] = opinion
 
-        self.max_reward += opinions[max(opinions, key=opinions.get)]
+        max_reward = opinions[max(opinions, key=opinions.get)]
+        self.max_reward += max_reward
         self.total_reward += opinions[chosen_addr]
-        self.random_reward += opinions[np.random.choice(list(opinions.keys()))]
-        gradient =(estimate - opinion) * values
+        self.expected_random_reward += np.sum(list(opinions.values())) / len(opinions)
+
+        if max_reward == opinions[chosen_addr]:
+            self.chose_best += 1
+
+        gradient =(estimate - opinions[chosen_addr]) * values
         self.connections[chosen_addr]['weights'] -= gradient
 
     @aiomas.expose
@@ -76,4 +84,6 @@ class GDAgent(FeatureAgent):
         self._log(logging.INFO, '-------------------------------------------------------')
         self._log(logging.INFO, 'Total reward: ' + str(self.total_reward))
         self._log(logging.INFO, 'Max reward: ' + str(self.max_reward))
-        self._log(logging.INFO, 'Random reward: ' + str(self.random_reward))
+        self._log(logging.INFO, 'Expected random reward: ' + str(self.expected_random_reward))
+        self._log(logging.INFO, 'Chose best {}/{} times'.format(self.chose_best, self.age))
+        #self._log(logging.INFO, str(self.connections))
