@@ -64,7 +64,7 @@ if __name__ == '__main__':
         try:
             func = gp.compile(individual, individual.pset)
         except MemoryError:
-            print('fak')
+            raise MemoryError
         image = np.zeros((width, height, 3))
 
         coords = [(x, y) for x in range(width) for y in range(height)]

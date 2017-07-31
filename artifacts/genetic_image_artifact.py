@@ -16,14 +16,25 @@ class GeneticImageArtifact(Artifact):
 
     @staticmethod
     def max_distance(create_kwargs):
+        class DummyArtifact():
+            def __init__(self, obj):
+                self.obj = obj
+
         shape = create_kwargs['shape']
-        return np.sqrt(np.sum(np.square(np.ones(shape))))
+        art1 = DummyArtifact(np.zeros((shape[0], shape[1], 3)))
+        art2 = DummyArtifact(np.ones((shape[0], shape[1], 3)) * 255)
+        return GeneticImageArtifact.distance(art1, art2)
 
     @staticmethod
     def distance(artifact1, artifact2):
-        img1 = cv2.cvtColor(artifact1.obj, cv2.COLOR_RGB2GRAY) / 255
-        img2 = cv2.cvtColor(artifact2.obj, cv2.COLOR_RGB2GRAY) / 255
-        return np.sqrt(np.sum(np.square(img1 - img2)))
+        im1 = artifact1.obj / 255
+        im2 = artifact2.obj / 255
+        distances = np.zeros(3)
+        for i in range(3):
+            ch1 = im1[:, :, i]
+            ch2 = im2[:, :, i]
+            distances[i] = np.sqrt(np.sum(np.square(ch1 - ch2)))
+        return np.sqrt(np.sum(distances**2))
 
     @staticmethod
     def generate_image(func, shape=(32, 32)):

@@ -12,8 +12,8 @@ import shutil
 
 if __name__ == "__main__":
     # Parameters
-    critic_threshold = 0.2
-    veto_threshold = 0.2
+    critic_threshold = 0.001
+    veto_threshold = 0.001
 
     novelty_weight = 0.85
 

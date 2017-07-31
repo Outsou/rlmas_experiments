@@ -4,6 +4,7 @@ from utilities.misc import agent_name_parse
 
 import os
 import shutil
+import aiomas
 
 
 class StatEnvironment(MultiEnvironment):
@@ -18,6 +19,12 @@ class StatEnvironment(MultiEnvironment):
 
     def get_passed_self_criticism_counts(self):
         return self.get_dictionary('get_passed_self_criticism_count')
+
+    def get_recommendations(self):
+        return self.get_dictionary('get_recommendations')
+
+    def get_total_rewards(self):
+        return self.get_dictionary('get_total_reward')
 
     def get_dictionary(self, func_name):
         agents = self.get_agents(addr=False)
