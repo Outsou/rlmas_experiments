@@ -12,9 +12,9 @@ class GDAgent(FeatureAgent):
         self.max_reward = 0
         self.expected_random_reward = 0
         self.age = 0
-        self.chose_best = 0
         self.impressionability = impressionability
         self.recommendations = {'passed': [], 'rejected': []}
+        self.reward_sources = {}
 
     @aiomas.expose
     def get_opinion(self, artifact):
@@ -62,6 +62,7 @@ class GDAgent(FeatureAgent):
         self.connection_counts = {}
         for conn in conns:
             self.connections[conn[0]]['weights'] = np.full(len(self.R), 0.5)
+            self.reward_sources[conn[0]] = 0
 
         return rets
 
@@ -75,42 +76,38 @@ class GDAgent(FeatureAgent):
 
     @aiomas.expose
     async def act(self):
-        def choose_connection(values):
-            if np.random.random() < 0.2:
-                addr = np.random.choice(list(self.connections.keys()))
-                estimate = np.sum(values * self.connections[addr]['weights'])
-                return addr, estimate
-
-            estimates = {}
-            for addr in self.connections.keys():
-                estimates[addr] = np.sum(values * self.connections[addr]['weights'])
-
-            max_addr = max(estimates, key=estimates.get)
-            return max_addr, estimates[max_addr]
-
         self.age += 1
+
+        # Create artifact
         artifact = self.invent(self.search_width)
         eval, values = self.evaluate(artifact)
         artifact.framings['objective_values'] = values
-        chosen_addr, estimate = choose_connection(values)
 
+        # Make estimates
+        estimates = {}
+        for addr in self.connections.keys():
+            estimates[addr] = np.sum(values * self.connections[addr]['weights'])
+
+        # Get real opinions
         opinions = {}
         for addr in self.connections:
             remote_agent = await self.env.connect(addr)
             opinion = await remote_agent.get_opinion(artifact)
             opinions[addr] = opinion
+            self.reward_sources[addr] += opinion
 
+        # Update weigths
+        for addr, estimate in estimates.items():
+            gradient = (estimate - opinions[addr]) * values
+            self.connections[addr]['weights'] -= gradient
+
+        # Do bookkeeping
         max_reward = opinions[max(opinions, key=opinions.get)]
         self.max_reward += max_reward
         #self.total_reward += opinions[chosen_addr]
         self.total_reward += np.sum(list(opinions.values()))
         self.expected_random_reward += np.sum(list(opinions.values())) / len(opinions)
 
-        if max_reward == opinions[chosen_addr]:
-            self.chose_best += 1
-
-        gradient =(estimate - opinions[chosen_addr]) * values
-        self.connections[chosen_addr]['weights'] -= gradient
 
     @aiomas.expose
     def close(self, folder=None):
@@ -118,7 +115,6 @@ class GDAgent(FeatureAgent):
         self._log(logging.INFO, 'Total reward: ' + str(self.total_reward))
         self._log(logging.INFO, 'Max reward: ' + str(self.max_reward))
         self._log(logging.INFO, 'Expected random reward: ' + str(self.expected_random_reward))
-        self._log(logging.INFO, 'Chose best {}/{} times'.format(self.chose_best, self.age))
         passed_len = len(self.recommendations['passed'])
         if passed_len > 0:
             self._log(logging.INFO, '{}/{} recommendations passed with avg evaluation {}'
@@ -127,4 +123,6 @@ class GDAgent(FeatureAgent):
                               np.sum(self.recommendations['passed']) / passed_len))
         else:
             self._log(logging.INFO, '0 recommendations passed')
+        self._log(logging.INFO, 'Reward sources:')
+        self._log(logging.INFO, str(self.reward_sources))
         #self._log(logging.INFO, str(self.connections))

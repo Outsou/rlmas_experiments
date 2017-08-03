@@ -34,19 +34,50 @@ def exp(a):
         a = -100
     return np.exp(a)
 
+def divide(a, b):
+    if b == 0:
+        b = 0.000001
+    return np.divide(a, b)
+
+def sign(a):
+    if a < 0:
+        return -1
+    elif a > 0:
+        return 1
+    else:
+        return 0
+
+def mdist(a, b):
+    return abs(a-b)
+
+def safe_pow(a, b):
+    if a == 0 and b < 0:
+        return 0
+    return pow(a, b)
+
+def abs_sqrt(a):
+    return np.sqrt(abs(a))
 
 def create_pset():
     pset = gp.PrimitiveSetTyped("main", [float, float], list)
     pset.addPrimitive(combine, [float, float, float], list)
     pset.addPrimitive(operator.mul, [float, float], float)
+    pset.addPrimitive(divide, [float, float], float)
     pset.addPrimitive(operator.add, [float, float], float)
     pset.addPrimitive(operator.sub, [float, float], float)
     pset.addPrimitive(np.sin, [float], float)
     pset.addPrimitive(np.cos, [float], float)
-    pset.addPrimitive(np.tan, [float], float)
-    pset.addPrimitive(exp, [float], float)
-    pset.addPrimitive(log, [float], float)
+    #pset.addPrimitive(np.tan, [float], float)
+    pset.addPrimitive(min, [float, float], float)
+    pset.addPrimitive(max, [float, float], float)
+    pset.addPrimitive(np.abs, [float], float)
+    #pset.addPrimitive(exp, [float], float)
+    #pset.addPrimitive(log, [float], float)
+    #pset.addPrimitive(safe_pow, [float, float], float)
+    pset.addPrimitive(abs_sqrt, [float], float)
     #pset.addEphemeralConstant('rand', lambda: np.around(np.random.random() * 255), float)
+    pset.addPrimitive(sign, [float], float)
+    pset.addPrimitive(mdist, [float, float], float)
 
     pset.renameArguments(ARG0="x")
     pset.renameArguments(ARG1="y")

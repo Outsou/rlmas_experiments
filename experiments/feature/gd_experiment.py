@@ -9,8 +9,8 @@ import numpy as np
 if __name__ == "__main__":
     # Parameters
     num_of_agents = 5
-    critic_threshold = 0.7
-    impressionability = 0.9
+    critic_threshold = 0.5
+    impressionability = 1
 
     pset = create_pset()
 

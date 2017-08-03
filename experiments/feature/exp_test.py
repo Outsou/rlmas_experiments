@@ -19,7 +19,7 @@ if __name__ == "__main__":
 
     pset = create_pset()
 
-    shape = (32, 32)
+    shape = (128, 128)
     create_kwargs = {'pset': pset,
                      'toolbox': create_toolbox(),
                      'pop_size': 10,
