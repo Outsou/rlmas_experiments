@@ -64,7 +64,7 @@ def generate_color_image(individual, width, height):
     try:
         func = gp.compile(individual, individual.pset)
     except MemoryError:
-        raise MemoryError
+        return None
     image = np.zeros((width, height, 3))
 
     coords = [(x, y) for x in range(width) for y in range(height)]
@@ -73,7 +73,7 @@ def generate_color_image(individual, width, height):
         y = coord[1]
         x_normalized = x / width * 2 - 1
         y_normalized = y / height * 2 - 1
-        color_value = np.around(np.array(func(x_normalized, y_normalized))* 255)
+        color_value = np.around(np.array(func(x_normalized, y_normalized)))
         for i in range(3):
             if color_value[i] > 255:
                 image[x, y, i] = 255
@@ -85,6 +85,8 @@ def generate_color_image(individual, width, height):
 
 def evaluate(individual):
     image = generate_color_image(individual, 128, 128)
+    if image is None:
+        return -1,
 
     # image_ = image / 255
     # my_cmap = plt.cm.get_cmap('rainbow')
@@ -112,7 +114,7 @@ def evaluate(individual):
     feature2 = ImageIntensityFeature()
     feature3 = ImageComplexityFeature()
 
-    evaluation = feature1(art) + feature2(art) * 0.5 + feature3(art) * 0.2git
+    evaluation = feature1(art) + feature2(art) * 0.5 + feature3(art) * 0.2
 
     return evaluation,
 

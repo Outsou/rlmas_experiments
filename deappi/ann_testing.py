@@ -99,6 +99,8 @@ def class_probability(image, classname):
 
 def evaluate(individual):
     image = generate_color_image(individual, 128, 128)
+    if image is None:
+        return -1,
     return class_probability(image, 'chainlink fence'),
 
 
