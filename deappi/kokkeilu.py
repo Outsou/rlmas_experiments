@@ -71,9 +71,9 @@ def generate_color_image(individual, width, height):
     for coord in coords:
         x = coord[0]
         y = coord[1]
-        x_normalized = x / width - 0.5
-        y_normalized = y / height - 0.5
-        color_value = np.around(np.abs(func(x_normalized, y_normalized)) * 255)
+        x_normalized = x / width * 2 - 1
+        y_normalized = y / height * 2 - 1
+        color_value = np.around(np.array(func(x_normalized, y_normalized))* 255)
         for i in range(3):
             if color_value[i] > 255:
                 image[x, y, i] = 255
@@ -84,7 +84,7 @@ def generate_color_image(individual, width, height):
 
 
 def evaluate(individual):
-    image = generate_color_image(individual, 32, 32)
+    image = generate_color_image(individual, 128, 128)
 
     # image_ = image / 255
     # my_cmap = plt.cm.get_cmap('rainbow')
@@ -108,11 +108,11 @@ def evaluate(individual):
 
     art = DummyArt(image, 'image')
 
-    feature1 = ImageRednessFeature()
+    feature1 = ImageBluenessFeature()
     feature2 = ImageIntensityFeature()
     feature3 = ImageComplexityFeature()
 
-    evaluation = feature1(art) + feature2(art) * 0.5 + feature3(art)
+    evaluation = feature1(art) + feature2(art) * 0.5 + feature3(art) * 0.2git
 
     return evaluation,
 
@@ -261,7 +261,7 @@ if __name__ == '__main__':
 
     pop = toolbox.population(n=50)
 
-    pop = evolve_population(pop, 10, toolbox)
+    pop, _ = evolve_population(pop, 10, toolbox)
 
     best = tools.selBest(pop, 1)[0]
     eval = evaluate(best)

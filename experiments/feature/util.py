@@ -6,6 +6,7 @@ from creamas.image import fractal_dimension
 from creamas.mappers import LinearMapper
 import creamas.features as ft
 from utilities.serializers import *
+from utilities.bitwise import float_or, float_xor, float_and
 
 from deap import base
 from deap import tools
@@ -75,9 +76,12 @@ def create_pset():
     #pset.addPrimitive(log, [float], float)
     #pset.addPrimitive(safe_pow, [float, float], float)
     pset.addPrimitive(abs_sqrt, [float], float)
-    #pset.addEphemeralConstant('rand', lambda: np.around(np.random.random() * 255), float)
+    pset.addEphemeralConstant('rand', lambda: np.random.random() * 2 - 1, float)
     pset.addPrimitive(sign, [float], float)
     pset.addPrimitive(mdist, [float, float], float)
+    pset.addPrimitive(float_or, [float, float], float)
+    pset.addPrimitive(float_xor, [float, float], float)
+    pset.addPrimitive(float_and, [float, float], float)
 
     pset.renameArguments(ARG0="x")
     pset.renameArguments(ARG1="y")

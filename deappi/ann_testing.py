@@ -9,6 +9,10 @@ import os
 import re
 import shutil
 import time
+import sys
+import urllib
+import tarfile
+
 
 class NodeLookup(object):
     """Converts integer node ID's to human readable labels."""
@@ -83,7 +87,8 @@ class NodeLookup(object):
         return ids
 
 _temp_path = '/tmp/imagenet'
-_node_lookup = NodeLookup()
+_node_lookup = None
+DATA_URL = 'http://download.tensorflow.org/models/image/imagenet/inception-2015-12-05.tgz'
 
 
 def class_probability(image, classname):
@@ -134,8 +139,28 @@ def mutate(individual, pset, expr):
         return gp.mutNodeReplacement(individual, pset)
     return gp.mutUniform(individual, expr, pset)
 
+def maybe_download_and_extract():
+    """Download and extract model tar file."""
+    dest_directory = _temp_path
+    if not os.path.exists(dest_directory):
+        os.makedirs(dest_directory)
+    filename = DATA_URL.split('/')[-1]
+    filepath = os.path.join(dest_directory, filename)
+    if not os.path.exists(filepath):
+        def _progress(count, block_size, total_size):
+            sys.stdout.write('\r>> Downloading %s %.1f%%' % (
+              filename, float(count * block_size) / float(total_size) * 100.0))
+            sys.stdout.flush()
+        filepath, _ = urllib.request.urlretrieve(DATA_URL, filepath, _progress)
+        print()
+        statinfo = os.stat(filepath)
+        print('Successfully downloaded', filename, statinfo.st_size, 'bytes.')
+    tarfile.open(filepath, 'r:gz').extractall(dest_directory)
+
 
 if __name__ == '__main__':
+    maybe_download_and_extract()
+    _node_lookup = NodeLookup()
 
     start_time = time.time()
 
