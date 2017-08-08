@@ -57,12 +57,15 @@ class FeatureAgent(RuleAgent):
     @aiomas.expose
     def evaluate(self, artifact):
         if self.name in artifact.evals:
-            return artifact.evals[self.name], artifact.framings['eval_values']
+            return artifact.evals[self.name], None
 
         value, _ = super().evaluate(artifact)
+        if self.stmem.length <= 0:
+            artifact.add_eval(self, value)
+            return value, None
+
         novelty = self.novelty(artifact)
         evaluation = (1 - self.novelty_weight) * value + self.novelty_weight * novelty
-
         artifact.add_eval(self, evaluation)
         eval_values = {'value': value, 'novelty': novelty}
         artifact.framings['eval_values'] = eval_values
@@ -70,7 +73,7 @@ class FeatureAgent(RuleAgent):
         return evaluation, eval_values
 
     def invent(self, n):
-        best_artifact, _ = self.artifact_cls.invent(self.search_width, self, self.create_kwargs)
+        best_artifact, _ = self.artifact_cls.invent(n, self, self.create_kwargs)
         return best_artifact
 
     def learn(self, artifact, iterations=1):
@@ -129,9 +132,8 @@ class FeatureAgent(RuleAgent):
     async def act(self):
         artifact = self.invent(self.search_width)
         eval, eval_values = self.evaluate(artifact)
-        artifact.framings['eval_values'] = eval_values
-        self._log(logging.INFO, 'Created artifact with evaluation {} (value: {}, novelty: {}) and tree size {}'
-                  .format(eval, eval_values['value'], eval_values['novelty'], len(artifact.framings['function_tree'])))
+        # artifact.framings['eval_values'] = eval_values
+        self._log(logging.INFO, 'Created artifact with evaluation {}'.format(eval))
         self.add_artifact(artifact)
 
         if eval >= self._own_threshold:
