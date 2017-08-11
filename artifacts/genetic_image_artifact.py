@@ -46,8 +46,8 @@ class GeneticImageArtifact(Artifact):
         for coord in coords:
             x = coord[0]
             y = coord[1]
-            x_normalized = x / width - 0.5
-            y_normalized = y / height - 0.5
+            x_normalized = x / width * 2 - 1
+            y_normalized = y / height * 2 - 1
             color_value = np.around(np.array(func(x_normalized, y_normalized)))
             for i in range(3):
                 if color_value[i] < 0:
@@ -113,12 +113,59 @@ class GeneticImageArtifact(Artifact):
             population[:] = offspring
 
     @staticmethod
-    def create(generations, agent, toolbox, pset, pop_size, shape):
-        population = []
+    def create_population(size, pset):
+        GeneticImageArtifact.init_creator(pset)
+        pop_toolbox = base.Toolbox()
+        pop_toolbox.register("expr", gp.genHalfAndHalf, pset=pset, min_=2, max_=3)
+        pop_toolbox.register("individual", tools.initIterate, creator.Individual,
+                             pop_toolbox.expr)
+        pop_toolbox.register("population", tools.initRepeat, list, pop_toolbox.individual)
+        return pop_toolbox.population(size)
 
+    @staticmethod
+    def init_creator(pset):
         creator.create("FitnessMax", base.Fitness, weights=(1.0,))
         creator.create("Individual", gp.PrimitiveTree, fitness=creator.FitnessMax,
                        pset=pset, image=None)
+
+    @staticmethod
+    def work_on_artifact(agent, artifact, create_kwargs, iterations=1):
+        # if artifact is None:
+        #     pop = GeneticImageArtifact.create_population(create_kwargs['pop_size'], create_kwargs['pset'])
+        # else:
+        #     pop = []
+        #     for individual in artifact.framings['pop']:
+        #         GeneticImageArtifact.init_creator(create_kwargs['pset'])
+        #         pop.append(creator.Individual(individual))
+        # GeneticImageArtifact.evolve_population(pop,
+        #                                        iterations, create_kwargs['toolbox'],
+        #                                        create_kwargs['pset'])
+        # best = tools.selBest(pop, 1)[0]
+        # new_artifact = GeneticImageArtifact(agent, best.image, list(best))
+        # new_artifact.framings['pop'] = list(map(list, pop))
+
+        toolbox = create_kwargs['toolbox']
+
+        GeneticImageArtifact.init_creator(create_kwargs['pset'])
+        individual = creator.Individual(artifact.framings['function_tree'])
+        individual.fitness.values = toolbox.evaluate(individual)
+        import copy
+        while True:
+            mutant = copy.deepcopy(individual)
+            toolbox.mutate(mutant, create_kwargs['pset'])
+            del mutant.fitness.values
+            del mutant.image
+            mutant.fitness.values = toolbox.evaluate(mutant)
+            if mutant.fitness.values[0] > individual.fitness.values[0]:
+                individual = mutant
+            if individual.fitness.values[0] > 0.3:
+                break
+
+        return GeneticImageArtifact(agent, individual.image, list(individual))
+
+    @staticmethod
+    def create(generations, agent, toolbox, pset, pop_size, shape):
+        population = []
 
         if len(agent.stmem.artifacts) > 0:
             mem_size = min(pop_size, len(agent.stmem.artifacts))
@@ -128,17 +175,13 @@ class GeneticImageArtifact(Artifact):
                 population.append(individual)
 
         if len(population) < pop_size:
-            pop_toolbox = base.Toolbox()
-            pop_toolbox.register("expr", gp.genHalfAndHalf, pset=pset, min_=2, max_=3)
-            pop_toolbox.register("individual", tools.initIterate, creator.Individual,
-                                 pop_toolbox.expr)
-            pop_toolbox.register("population", tools.initRepeat, list, pop_toolbox.individual)
-            population += pop_toolbox.population(pop_size - len(population))
+            population += GeneticImageArtifact.create_population(pop_size - len(population), pset)
 
         toolbox.register("evaluate", GeneticImageArtifact.evaluate, agent=agent, shape=shape)
         GeneticImageArtifact.evolve_population(population, generations, toolbox, pset)
         best = tools.selBest(population, 1)[0]
         return best
+
 
     @staticmethod
     def invent(n, agent, create_kwargs):

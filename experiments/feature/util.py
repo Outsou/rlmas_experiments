@@ -19,7 +19,7 @@ import aiomas
 
 
 def combine(num1, num2, num3):
-    return [num1, num2, num3]
+    return [float(num1), float(num2), float(num3)]
 
 
 def log(a):
@@ -76,7 +76,7 @@ def create_pset():
     #pset.addPrimitive(log, [float], float)
     #pset.addPrimitive(safe_pow, [float, float], float)
     pset.addPrimitive(abs_sqrt, [float], float)
-    pset.addEphemeralConstant('rand', lambda: np.random.random() * 2 - 1, float)
+    #pset.addEphemeralConstant('rand', lambda: np.random.random() * 2 - 1, float)
     pset.addPrimitive(sign, [float], float)
     pset.addPrimitive(mdist, [float, float], float)
     pset.addPrimitive(float_or, [float, float], float)
@@ -88,16 +88,22 @@ def create_pset():
     return pset
 
 
-def mutate(individual, pset):
-    if np.random.random() < 0.5:
-        return gp.mutShrink(individual)
-    return gp.mutInsert(individual, pset)
+def mutate(individual, pset, expr):
+    rand = np.random.rand()
+    if rand <= 0.25:
+        return gp.mutShrink(individual),
+    elif rand <= 0.5:
+        return gp.mutInsert(individual, pset)
+    elif rand <= 0.75:
+        return gp.mutNodeReplacement(individual, pset)
+    return gp.mutUniform(individual, expr, pset)
 
 
-def create_toolbox():
+def create_toolbox(pset):
     toolbox = base.Toolbox()
+    toolbox.register("expr", gp.genHalfAndHalf, pset=pset, min_=2, max_=3)
     toolbox.register("mate", gp.cxOnePoint)
-    toolbox.register("mutate", mutate)
+    toolbox.register("mutate", mutate, expr=toolbox.expr)
     toolbox.register("select", tools.selDoubleTournament, fitness_size=3, parsimony_size=1.4, fitness_first=True)
     return toolbox
 
