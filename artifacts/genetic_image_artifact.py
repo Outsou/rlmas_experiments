@@ -6,7 +6,7 @@ from deap import creator
 from deap import base
 import deap.gp as gp
 
-import cv2
+import logging
 
 
 class GeneticImageArtifact(Artifact):
@@ -147,21 +147,47 @@ class GeneticImageArtifact(Artifact):
         toolbox = create_kwargs['toolbox']
 
         GeneticImageArtifact.init_creator(create_kwargs['pset'])
-        individual = creator.Individual(artifact.framings['function_tree'])
-        individual.fitness.values = toolbox.evaluate(individual)
+        ind1 = creator.Individual(artifact.framings['function_tree'])
+        ind1.fitness.values = toolbox.evaluate(ind1)
         import copy
+
+        # while True:
+        #     mutant = copy.deepcopy(ind1)
+        #     toolbox.mutate(mutant, create_kwargs['pset'])
+        #     del mutant.fitness.values
+        #     del mutant.image
+        #     mutant.fitness.values = toolbox.evaluate(mutant)
+        #     if mutant.fitness.values[0] > ind1.fitness.values[0]:
+        #         ind1 = mutant
+        #     if ind1.fitness.values[0] > 0.35:
+        #         break
+
+        ind2 = creator.Individual(agent.artifact.framings['function_tree'])
+        ind2.fitness.values = toolbox.evaluate(ind2)
+
+        i = 0
         while True:
-            mutant = copy.deepcopy(individual)
-            toolbox.mutate(mutant, create_kwargs['pset'])
-            del mutant.fitness.values
-            del mutant.image
-            mutant.fitness.values = toolbox.evaluate(mutant)
-            if mutant.fitness.values[0] > individual.fitness.values[0]:
-                individual = mutant
-            if individual.fitness.values[0] > 0.3:
+            i += 1
+            child1 = copy.deepcopy(ind1)
+            child2 = copy.deepcopy(ind2)
+            toolbox.mate(child1, child2)
+            del child1.fitness.values
+            del child2.fitness.values
+            del child1.image
+            del child2.image
+            child1.fitness.values = toolbox.evaluate(child1)
+            child2.fitness.values = toolbox.evaluate(child2)
+            if child1.fitness.values[0] > ind1.fitness.values[0]:
+                ind1 = child1
+            if child2.fitness.values[0] > ind2.fitness.values[0]:
+                ind2 = child2
+            if ind1.fitness.values[0] > 0.4:
                 break
 
-        return GeneticImageArtifact(agent, individual.image, list(individual))
+        agent._log(logging.INFO, 'Mating iterations: ' + str(i))
+        agent.artifact = GeneticImageArtifact(agent, ind2.image, list(ind2))
+
+        return GeneticImageArtifact(agent, ind1.image, list(ind1))
 
     @staticmethod
     def create(generations, agent, toolbox, pset, pop_size, shape):

@@ -47,7 +47,7 @@ if __name__ == "__main__":
                      'pop_size': 10,
                      'shape': shape}
 
-    rules = [rule_dict['green'], rule_dict['red']]
+    rules = [rule_dict['red'], rule_dict['green']]
     rule_weights = [0.3, 0.7]
 
     agent1 = aiomas.run(until=menv.spawn('deappi.collab_agent:CollabAgent',
@@ -59,7 +59,7 @@ if __name__ == "__main__":
 
     print(agent1)
 
-    rules = [rule_dict['green'], rule_dict['blue']]
+    rules = [rule_dict['red'], rule_dict['blue']]
     rule_weights = [0.3, 0.7]
 
     agent2 = aiomas.run(until=menv.spawn('deappi.collab_agent:CollabAgent',
