@@ -96,7 +96,7 @@ class GDAgent(FeatureAgent):
             opinions[addr] = opinion
             self.reward_sources[addr] += opinion
 
-        # Update weigths
+        # Update weights
         for addr, estimate in estimates.items():
             gradient = (estimate - opinions[addr]) * values
             self.connections[addr]['weights'] -= gradient

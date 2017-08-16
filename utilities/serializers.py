@@ -4,6 +4,7 @@ from creamas.rules import RuleLeaf
 from artifacts.spr_artifact import SpiroArtifact as SpiroArtifactOwn
 from artifacts.maze_artifact import MazeArtifact
 from artifacts.genetic_image_artifact import GeneticImageArtifact
+from artifacts.dummy_artifact import DummyArtifact
 from deap.gp import Primitive, Terminal, PrimitiveSet, PrimitiveSetTyped
 from deap.base import Toolbox
 
@@ -43,20 +44,30 @@ def get_terminal_ser():
 def get_primitive_set_ser():
     return PrimitiveSet, pickle.dumps, pickle.loads
 
+
 def get_primitive_set_typed_ser():
     return PrimitiveSetTyped, pickle.dumps, pickle.loads
+
 
 def get_toolbox_ser():
     return Toolbox, pickle.dumps, pickle.loads
 
+
 def get_type_ser():
     return type, pickle.dumps, pickle.loads
+
 
 def get_rule_leaf_ser():
     return RuleLeaf, pickle.dumps, pickle.loads
 
+
 def get_genetic_image_artifact_ser():
     return GeneticImageArtifact, pickle.dumps, pickle.loads
 
+
 def get_ndarray_ser():
     return ndarray, pickle.dumps, pickle.loads
+
+
+def get_dummy_ser():
+    return DummyArtifact, pickle.dumps, pickle.loads

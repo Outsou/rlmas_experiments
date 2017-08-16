@@ -101,7 +101,7 @@ def evaluate(individual):
     image = generate_color_image(individual, 128, 128)
     if image is None:
         return -1,
-    return class_probability(image, 'chainlink fence'),
+    return class_probability(image, 'banana'),
 
 
 def create_graph():
@@ -187,7 +187,7 @@ if __name__ == '__main__':
 
     pop = toolbox.population(n=10)
 
-    pop, best_in_gen = evolve_population(pop, 500, toolbox)
+    pop, best_in_gen = evolve_population(pop, 200, toolbox)
 
     print('Run time: {0:.2f}s'.format(time.time() - start_time))
     start_time = time.time()
